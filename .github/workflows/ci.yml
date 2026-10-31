@@ -1,0 +1,82 @@
+name: Game CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - run: pnpm run lint
+      - run: pnpm test
+      - run: pnpm run build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm run ci:games
+      - name: Save independent packages and verification reports
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: games-${{ github.sha }}
+          path: |
+            dist/games/
+            reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+  deploy:
+    name: Create, publish and update Scalia games in cloud
+    needs: verify
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # Persist encrypted credentials/bindings on scalia-ci-state only.
+      actions: read
+    concurrency:
+      group: scalia-production-connection
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 26
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: games-${{ github.sha }}
+          path: ${{ runner.temp }}/scalia-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Upload, freeze candidate and publish changed packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SCALIA_STATE_KEY: ${{ secrets.SCALIA_STATE_KEY }}
+          SCALIA_ARTIFACT_ROOT: ${{ runner.temp }}/scalia-${{ github.run_id }}-${{ github.run_attempt }}
+          SCALIA_DEPLOY_REPORT: ${{ runner.temp }}/scalia-deploy-${{ github.run_id }}-${{ github.run_attempt }}.json
+        run: node scripts/deploy-games.mjs
+      - name: Save deployment receipt
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: deployment-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/scalia-deploy-${{ github.run_id }}-${{ github.run_attempt }}.json
+          if-no-files-found: warn
+          retention-days: 30

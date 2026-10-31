@@ -1,0 +1,15 @@
+.catalog {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+.catalog ul {
+  list-style: none;
+  padding: 0;
+}
+
+.catalog li {
+  border-top: 1px solid #d9dee5;
+  padding: 1.25rem 0;
+}

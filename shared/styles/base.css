@@ -1,0 +1,12 @@
+:root {
+  font-family: system-ui, "Microsoft YaHei", sans-serif;
+  color: #243041;
+  background: #f5f7fa;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+a { color: #205bba; text-underline-offset: 0.2em; }
+p { line-height: 1.7; }

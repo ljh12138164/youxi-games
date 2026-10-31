@@ -1,0 +1,15 @@
+Youxi Games (游隙 H5 多游戏项目)
+Copyright 2026 李建辉
+
+本项目（Youxi Games）依据 Apache License, Version 2.0 发布。
+
+本项目随游戏发布包分发的构建产物内联了以下第三方组件的许可声明（MIT License，
+各自版权声明保留在构建产物中）：
+
+- React, React DOM
+  Copyright (c) Meta Platforms, Inc. and affiliates.
+
+- PixiJS
+  Copyright (c) 2013-2023 Mathew Groves, Chad Engler
+
+各游戏内的美术、音频、界面与文案均为本项目自行创作，不包含第三方素材。

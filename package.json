@@ -1,0 +1,44 @@
+{
+  "name": "youxi-games",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@11.20.0",
+  "type": "module",
+  "engines": {
+    "node": "^22.18.0 || >=24.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "build": "pnpm run typecheck && vite build",
+    "build:game": "pnpm run typecheck && node scripts/build-game.mjs",
+    "preview": "vite preview",
+    "new:game": "node scripts/new-game.mjs",
+    "test": "node --test scripts/tests/*.test.mjs games/*/tests/*.test.ts",
+    "prepare": "husky",
+    "ci:games": "node scripts/ci-games.mjs"
+  },
+  "dependencies": {
+    "pixi.js": "^8.22.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "oxlint": "^1.90.0",
+    "playwright": "1.64.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vite-plugin-singlefile": "^2.3.4"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs,ts,tsx}": "oxlint"
+  }
+}
