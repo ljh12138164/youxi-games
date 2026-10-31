@@ -14,6 +14,8 @@ test('角色、敌人和拾取物素材预览与透明边界', async () => {
     await page.goto(server.resolvedUrls.local[0]);
     const result = await page.evaluate(async () => {
       const art = await import('/games/long-night-embers-h5/src/render/pixelArt.ts');
+      const { prepareApprovedArt } = await import('/games/long-night-embers-h5/src/render/approvedArt.ts');
+      await prepareApprovedArt();
       const data = await import('/games/long-night-embers-h5/src/content/ledger.ts');
       document.body.replaceChildren();
       document.body.style.cssText = 'margin:0;padding:28px;background:#101913;color:#efe4c9;font:14px system-ui';
@@ -52,6 +54,8 @@ test('角色、敌人和拾取物素材预览与透明边界', async () => {
         const w = data.WEAPON_MAP[id];
         return [w.nameZh, art.getProjectileTexture(id, w.behavior, w.color)];
       }));
+      addSection('全部武器', data.WEAPONS.filter(w => w.scope !== 'dlc_excluded').map(w => [w.nameZh, art.getItemTexture(w.id)]));
+      addSection('全部被动道具', data.PASSIVES.filter(w => w.scope !== 'dlc_excluded').map(w => [w.nameZh, art.getItemTexture(w.id)]));
       return signatures;
     });
     for (const [name, item] of Object.entries(result)) {
@@ -62,6 +66,50 @@ test('角色、敌人和拾取物素材预览与透明边界', async () => {
     await page.screenshot({ path: `reports/long-night-embers-assets-${process.env.ASSET_PREVIEW_VERSION || 'after'}.png`, fullPage: true });
   } finally {
     await browser?.close();
+    await server.close();
+  }
+});
+
+test('全部角色从存档进入真实战场，素材加载完成且可暂停', async () => {
+  const server = await createServer({ server: { host: '127.0.0.1', port: 0, open: false } });
+  await server.listen();
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    const origin = server.resolvedUrls.local[0];
+    await page.goto(origin);
+    const characterIds = await page.evaluate(async () => {
+      const { CHARACTERS, WEAPONS, PASSIVES } = await import('/games/long-night-embers-h5/src/content/ledger.ts');
+      const { hasApprovedArt } = await import('/games/long-night-embers-h5/src/render/approvedArt.ts');
+      const entries = [...CHARACTERS, ...WEAPONS, ...PASSIVES].filter(e => e.scope !== 'dlc_excluded');
+      const missing = entries.filter(e => !hasApprovedArt(e.id));
+      if (missing.length) throw Error('Missing art: ' + missing.map(e => e.id).join(', '));
+      return CHARACTERS.filter(c => c.scope !== 'dlc_excluded').map(c => c.id);
+    });
+    assert.equal(characterIds.length, 17);
+    for (const characterId of characterIds) {
+      await page.goto(origin);
+      await page.evaluate(async characterId => {
+        const core = await import('/games/long-night-embers-h5/src/core/engine.ts');
+        const storage = await import('/games/long-night-embers-h5/src/persistence/storage.ts');
+        const profile = core.createInitialProfile();
+        const run = core.createInitialRun(1, { seed: 42, characterId }, profile);
+        await storage.saveSlotBundle(1, run, profile);
+      }, characterId);
+      await page.goto(origin + 'games/long-night-embers-h5/');
+      await page.getByRole('button', { name: /直接出击当前角色|继续进度/ }).first().click();
+      await page.waitForTimeout(180);
+      await page.getByRole('button', { name: '⏸ 暂停', exact: true }).click();
+      assert.equal(await page.locator('.lne-app').getAttribute('data-running'), 'false');
+      assert.equal(await page.locator('.lne-webgl-error').count(), 0);
+      await page.addStyleTag({ content: '.lne-pause-overlay { visibility:hidden }' });
+      await page.screenshot({ path: `reports/approved-${characterId}.png` });
+    }
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
     await server.close();
   }
 });

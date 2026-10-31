@@ -1,0 +1,117 @@
+{
+  "characters": [
+    {
+      "file": "exec-a70fde17-401e-4680-80d7-b5883483bfa8.png",
+      "ids": [
+        "runescribe_odessa",
+        "stormcaller_iona",
+        "herbwise_bode",
+        "vowkeeper_oswin"
+      ]
+    },
+    {
+      "file": "exec-031ac7f0-6f77-4c4d-a639-efcd25c559c6.png",
+      "ids": [
+        "cleaver_bruna",
+        "bonewright_ravel",
+        "voidwing_iris",
+        "crown_seraphine"
+      ]
+    },
+    {
+      "file": "exec-14e55b10-e71e-415c-8772-b7a5ca75b4f2.png",
+      "ids": [
+        "moonveil_velaine",
+        "starward_odd",
+        "saintlight_nadia",
+        "pavilionsmith_orin"
+      ]
+    }
+  ],
+  "items": [
+    {
+      "file": "exec-3cf27be0-d202-447f-a2ca-be5a3927d6eb.png",
+      "columns": 5,
+      "rows": 4,
+      "ids": [
+        "whip",
+        "axe",
+        "cross",
+        "garlic",
+        "santa_water",
+        "runetracer",
+        "lightning_ring",
+        "pentagram",
+        "peachone",
+        "ebony_wings",
+        "phiera",
+        "eight_sparrow",
+        "bone",
+        "bracelets",
+        "clock_lancet",
+        "laurel",
+        "glass_fandango",
+        "phaser",
+        "santa_javelin",
+        "gaze_of_gaea"
+      ]
+    },
+    {
+      "file": "exec-0d2a3f15-95ab-45a4-8360-4cb7233e0e1c.png",
+      "columns": 7,
+      "rows": 3,
+      "ids": [
+        "bloody_tear",
+        "holy_wand",
+        "thousand_edge",
+        "heaven_sword",
+        "unholy_vespers",
+        "hellfire",
+        "soul_eater",
+        "la_borra",
+        "no_future",
+        "thunder_loop",
+        "gorgeous_moon",
+        "vandalier",
+        "phieraggi",
+        "bi_bracelet",
+        "tri_bracelet",
+        "sole_solution",
+        "infinite_corridor",
+        "crimson_shroud",
+        "celestial_voulge",
+        "photonstorm",
+        "seraphic_cry"
+      ]
+    },
+    {
+      "file": "exec-80ce3669-0f6b-4868-bbbe-409be1b138f5.png",
+      "columns": 6,
+      "rows": 4,
+      "ids": [
+        "spinach",
+        "hollow_heart",
+        "pummarola",
+        "empty_tome",
+        "candelabrador",
+        "bracer",
+        "spellbinder",
+        "duplicator",
+        "wings",
+        "attractorb",
+        "clover",
+        "crown",
+        "stone_mask",
+        "tiragisu",
+        "skull_o_maniac",
+        "torronas_box",
+        "silver_ring",
+        "gold_ring",
+        "metaglio_left",
+        "metaglio_right",
+        "parm_aegis",
+        "karomas_mana"
+      ]
+    }
+  ]
+}

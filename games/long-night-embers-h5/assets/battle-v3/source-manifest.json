@@ -1,0 +1,66 @@
+[
+  {
+    "file": "exec-d5175862-adf7-431f-955e-63cb9846e38a.png",
+    "columns": 4,
+    "rows": 4,
+    "size": 192,
+    "prefix": "enemy_",
+    "ids": [
+      "bat",
+      "swarm_bat",
+      "skeleton",
+      "zombie",
+      "ghost",
+      "mudman",
+      "werewolf",
+      "mummy",
+      "dullahan",
+      "snow_specter",
+      "astro_drone",
+      "boss_giant_bat",
+      "boss_blue_venus",
+      "boss_hag",
+      "boss_atlantean",
+      "reaper"
+    ]
+  },
+  {
+    "file": "exec-78d252f4-c963-40be-9651-e804c7a1ff57.png",
+    "columns": 5,
+    "rows": 3,
+    "size": 128,
+    "prefix": "pickup_",
+    "ids": [
+      "xp_blue",
+      "xp_green",
+      "xp_red",
+      "coin",
+      "coin_bag",
+      "rich_bag",
+      "roast_chicken",
+      "vacuum",
+      "rosary",
+      "orologion",
+      "chest",
+      "nduja_fritta",
+      "little_heart"
+    ]
+  },
+  {
+    "file": "exec-f4e753e2-ad68-4542-91e6-e975427c8e62.png",
+    "columns": 4,
+    "rows": 2,
+    "size": 128,
+    "prefix": "projectile_",
+    "ids": [
+      "arcane",
+      "fire",
+      "knife",
+      "rune",
+      "bone",
+      "frost",
+      "ice_spear",
+      "javelin"
+    ]
+  }
+]

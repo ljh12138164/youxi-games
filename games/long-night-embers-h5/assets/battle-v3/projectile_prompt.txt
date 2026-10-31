@@ -1,0 +1,10 @@
+ONE transparent production projectile sprite atlas, EXACTLY EIGHT separate horizontal projectiles in a REGULAR 4 column x 2 row grid. ALL projectiles point straight RIGHT with tip to right and tail/handle to left. Every projectile centered both horizontally and vertically in its cell, 20% empty transparent margins, no overlap. Transparent alpha background. Detailed crisp dark-fantasy pixel art matching reference's steel/brass/crystal material planes, hard pixel contours, readable at 24-32px. No items held by characters, no upright inventory pose. No text, UI, shadows, backdrop or huge soft glow.
+Row1 col1 cyan arcane magic bolt: narrow jagged cyan crystal arrowhead, ivory hot core, short dark-blue tapering energy tail left.
+Row1 col2 orange fireball: compact layered white-yellow core at RIGHT, orange-red flame tongues trailing LEFT, ragged sharp flame contour not a round icon.
+Row1 col3 small thrown silver dagger: dark leather grip LEFT, brass guard, shaded pointed steel blade RIGHT.
+Row1 col4 violet rune tracer: elongated faceted violet diamond projectile with white core, short purple streak tail LEFT.
+Row2 col1 thrown ivory bone: horizontal articulated natural bone, rounded double-knob ends, detailed bone highlights and shaded crevices, no crossed bones.
+Row2 col2 frost lance: horizontal thin cyan ice needle with right-pointing diamond tip and two small crystalline fins, icy white core.
+Row2 col3 ice spear: horizontal dark shaft LEFT, brass collar, translucent cyan spear tip RIGHT, practical compact flying spear.
+Row2 col4 holy javelin: horizontal ivory shaft LEFT, brass fittings, flame-shaped gold-and-silver pointed tip RIGHT.
+Exactly 8 clean projectiles. No magic staff, no clock face, no background.

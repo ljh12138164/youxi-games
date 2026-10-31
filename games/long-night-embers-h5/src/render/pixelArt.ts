@@ -1,5 +1,6 @@
 import { CanvasSource, Texture } from 'pixi.js';
-import { drawAdventurer, drawMonster } from './figures.ts';
+import { drawMonster } from './figures.ts';
+import { drawApprovedCharacter, drawApprovedPortrait, drawApprovedItem, drawApprovedEnemy, drawApprovedPickup, drawApprovedProjectile } from './approvedArt.ts';
 
 const dataUrlCache = new Map<string, string>();
 const textureCache = new Map<string, Texture>();
@@ -458,11 +459,35 @@ function drawCharacterCanvas(
   ];
   const matrix = frames[f] ?? TORREN_FRAME_STAND;
 
-  if (charId === 'torchguard_torren') {
+  if (drawApprovedCharacter(ctx, charId, f)) {
+    // User-approved bitmap art; unapproved characters retain their existing appearance.
+  } else if (charId === 'torchguard_torren') {
     // 托伦（火炬守卫）专属长夜余烬原创像素骑士配色（深红战袍/暗夜斗篷/暖栗发色/琥珀金饰）
     renderAsciiSprite(ctx, matrix, TORREN_PALETTE, 15, 15, 1);
   } else {
-    drawAdventurer(ctx, resolveAppearance(charId), f);
+    // 其他角色：根据 CHAR_APPEARANCES 动态换色，保持 16-bit 像素步态连贯一致
+    const app = resolveAppearance(charId);
+    const dynamicPalette: Record<string, string | null> = {
+      ...TORREN_PALETTE,
+      '0': app.cape,
+      '1': app.hair,
+      '2': app.hair,
+      '3': app.accent,
+      '4': app.accent,
+      '5': app.hair,
+      '7': app.skin,
+      '8': app.skin,
+      '9': app.tunic,
+      'a': app.tunicSub,
+      'b': app.cape,
+      'c': app.skin,
+      'd': app.accent,
+      'e': app.boots,
+      'f': app.boots,
+      'g': '#110f0e',
+      'h': app.accent,
+    };
+    renderAsciiSprite(ctx, matrix, dynamicPalette, 15, 15, 1);
   }
 
   if (silhouette) {
@@ -492,8 +517,36 @@ function drawCharacterPortraitCanvas(charId: string, locked = false): HTMLCanvas
 
   ctx.imageSmoothingEnabled = false;
 
-  // Portrait and battlefield use the same figure, including its equipment.
-  ctx.drawImage(drawCharacterCanvas(charId), 15, 15, 34, 34, 0, 0, 68, 68);
+  const matrix = TORREN_FRAME_STAND;
+
+  if (drawApprovedPortrait(ctx, charId)) {
+    // Portrait and battlefield use the same approved source.
+  } else if (charId === 'torchguard_torren') {
+    renderAsciiSprite(ctx, matrix, TORREN_PALETTE, 0, 0, 2);
+  } else {
+    const app = resolveAppearance(charId);
+    const dynamicPalette: Record<string, string | null> = {
+      ...TORREN_PALETTE,
+      '0': app.cape,
+      '1': app.hair,
+      '2': app.hair,
+      '3': app.accent,
+      '4': app.accent,
+      '5': app.hair,
+      '7': app.skin,
+      '8': app.skin,
+      '9': app.tunic,
+      'a': app.tunicSub,
+      'b': app.cape,
+      'c': app.skin,
+      'd': app.accent,
+      'e': app.boots,
+      'f': app.boots,
+      'g': '#110f0e',
+      'h': app.accent,
+    };
+    renderAsciiSprite(ctx, matrix, dynamicPalette, 0, 0, 2);
+  }
 
   if (locked) {
     ctx.save();
@@ -548,6 +601,8 @@ function drawItemIconCanvas(itemId: string, background = true): HTMLCanvasElemen
     ctx.fillStyle = '#0a0d14';
     ctx.fillRect(0, 0, 48, 48);
   }
+
+  if (drawApprovedItem(ctx, itemId)) return canvas;
 
   // --------------------------------------------------------------------------
   // 1. 进阶超武 (EVOLVED WEAPONS) - 优先匹配，防止被基础词拦截
@@ -1108,20 +1163,55 @@ export function getItemTexture(itemId: string): Texture {
 // Moving magic uses an actual bolt, rather than the inventory's staff icon.
 // These textures point right; the battlefield rotates them into the velocity vector.
 export function getProjectileTexture(weaponId: string, behavior: string, color: string): Texture {
-  if (behavior !== 'nearest_bolt' && behavior !== 'random_pierce_beam' && behavior !== 'facing_knife' && behavior !== 'bounce_tracer') {
+  const drawnBehaviors = ['nearest_bolt', 'random_pierce_beam', 'facing_knife', 'bounce_tracer', 'bounce_bone', 'clock_freeze_ray', 'thrust_spear', 'vertical_javelin', 'tri_shot', 'dual_diagonal', 'lightning_strike', 'circle_bombard'];
+  if (!drawnBehaviors.includes(behavior)) {
     return getItemTexture(weaponId);
   }
   return getCachedTexture(`projectile:${weaponId}:${color}`, () => {
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 48;
     const ctx = canvas.getContext('2d')!;
+    if (drawApprovedProjectile(ctx, behavior)) return canvas;
     ctx.fillStyle = color;
-    if (behavior === 'facing_knife') {
-      ctx.fillRect(9, 22, 25, 4);
+    const r = (x: number, y: number, w: number, h: number, fill: string) => {
+      ctx.fillStyle = fill;
+      ctx.fillRect(x, y, w, h);
+    };
+    if (behavior === 'facing_knife' || behavior === 'thrust_spear' || behavior === 'vertical_javelin') {
+      r(5, 21, 33, 7, '#111a24');
+      r(9, 22, 25, 4, color);
       ctx.fillStyle = '#78350f';
       ctx.fillRect(5, 22, 8, 4);
       ctx.fillStyle = '#f8fafc';
       ctx.fillRect(17, 22, 19, 2);
+      r(33, 23, 5, 2, '#f0f7ef');
+      r(13, 19, 2, 10, '#c6aa65');
+    } else if (behavior === 'bounce_bone') {
+      r(9, 19, 7, 12, '#82949b'); r(32, 19, 7, 12, '#82949b');
+      r(14, 23, 20, 5, '#e4e7d5');
+      r(9, 19, 6, 5, '#f4f0da'); r(9, 26, 6, 5, '#e4e7d5');
+      r(33, 19, 6, 5, '#f4f0da'); r(33, 26, 6, 5, '#e4e7d5');
+      r(16, 23, 15, 1, '#ffffec');
+    } else if (behavior === 'clock_freeze_ray') {
+      r(8, 23, 30, 2, '#73b8da'); r(20, 16, 10, 16, '#a7dfed');
+      r(16, 20, 18, 8, '#a7dfed'); r(23, 12, 4, 24, '#d7f6ef');
+      r(18, 18, 14, 2, '#f3fff5'); r(18, 28, 14, 2, '#f3fff5');
+      r(23, 21, 5, 6, '#ffffff');
+    } else if (behavior === 'lightning_strike') {
+      r(24, 3, 8, 13, '#b8c4ff'); r(19, 14, 10, 11, color);
+      r(25, 23, 8, 5, '#e6eaff'); r(19, 27, 10, 9, color);
+      r(17, 34, 5, 8, '#e6eaff'); r(23, 14, 3, 10, '#ffffff');
+    } else if (behavior === 'random_pierce_beam' || behavior === 'circle_bombard') {
+      // Ragged flame tongues and a layered hot core; transparent between the tongues.
+      r(5, 19, 18, 3, '#a84324'); r(9, 29, 14, 3, '#a84324');
+      r(12, 16, 14, 3, '#df6b29'); r(4, 24, 20, 3, '#df6b29');
+      r(18, 15, 14, 19, color); r(28, 18, 8, 13, color);
+      r(23, 18, 11, 12, '#ffc965'); r(29, 20, 8, 8, '#fff0b1');
+      r(32, 21, 5, 5, '#ffffe6');
+    } else if (behavior === 'bounce_tracer') {
+      r(4, 23, 23, 2, '#6b5a8d'); r(14, 20, 11, 8, color);
+      r(24, 16, 6, 16, color); r(30, 19, 5, 10, '#e0ceff');
+      r(35, 23, 5, 2, '#ffffff'); r(25, 20, 5, 8, '#f4e9ff');
     } else {
       ctx.fillRect(6, 22, 30, 4);
       ctx.fillRect(18, 18, 16, 12);
@@ -1153,6 +1243,7 @@ function drawEnemyCanvas(
   if (!ctx) return canvas;
 
   ctx.imageSmoothingEnabled = false;
+  if (drawApprovedEnemy(ctx, isReaper ? 'reaper' : enemyId, size, frame, colorHex, flashWhite)) return canvas;
   drawMonster(ctx, isReaper ? 'reaper' : enemyId, colorHex, frame, flashWhite, size);
 
   return canvas;
@@ -1186,12 +1277,17 @@ export function getPickupTexture(kind: string): Texture {
     if (!ctx) return canvas;
 
     ctx.imageSmoothingEnabled = false;
+    if (drawApprovedPickup(ctx, kind)) return canvas;
 
     // 辅助画单像素或 2x2 像素
     function p(x: number, y: number, color: string, sz = 2): void {
       ctx!.fillStyle = color;
       ctx!.fillRect(x * sz, y * sz, sz, sz);
     }
+    const r = (x: number, y: number, w: number, h: number, color: string) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(x * 2, y * 2, w * 2, h * 2);
+    };
 
     if (kind === 'chest') {
       // 16x12 经典红木黄铜包角宝箱 (scale = 2)
@@ -1270,9 +1366,63 @@ export function getPickupTexture(kind: string): Texture {
       return canvas;
     }
 
-    // 金币 Coin：14x14 金币浮雕像素币
+    if (kind === 'roast_chicken') {
+      r(8, 8, 5, 3, '#ead9b8'); r(12, 7, 2, 5, '#f9edce');
+      r(3, 5, 7, 7, '#2d211c'); r(2, 7, 9, 4, '#2d211c');
+      r(3, 6, 7, 5, '#ac522c'); r(4, 5, 5, 2, '#d68143');
+      r(3, 7, 3, 2, '#f3b36b'); r(7, 9, 3, 2, '#703729');
+      return canvas;
+    }
+    if (kind === 'little_heart') {
+      const rows = ['.###.###.', '#########', '#########', '.#######.', '..#####..', '...###...', '....#....'];
+      renderAsciiSprite(ctx, rows, { '#': '#ee697b' }, 6, 8, 2);
+      r(4, 5, 2, 1, '#ffd1c6'); r(7, 8, 3, 1, '#9b354d');
+      return canvas;
+    }
+    if (kind === 'vacuum') {
+      r(3, 4, 4, 8, '#101a24'); r(9, 4, 4, 8, '#101a24');
+      r(4, 4, 2, 7, '#d66055'); r(10, 4, 2, 7, '#578ec2');
+      r(4, 11, 8, 3, '#8597a6'); r(6, 12, 4, 1, '#dce5de');
+      r(4, 3, 2, 3, '#dce5de'); r(10, 3, 2, 3, '#dce5de');
+      return canvas;
+    }
+    if (kind === 'rosary') {
+      for (const [x, y] of [[5, 3], [8, 2], [11, 3], [12, 6], [11, 9], [8, 10], [5, 9], [4, 6]]) {
+        r(x!, y!, 2, 2, '#caaa66'); p(x!, y!, '#f4deb0');
+      }
+      r(8, 11, 1, 4, '#f4deb0'); r(6, 12, 5, 1, '#f4deb0');
+      return canvas;
+    }
+    if (kind === 'orologion') {
+      r(6, 1, 4, 2, '#c5a166'); r(3, 4, 10, 9, '#463c35');
+      r(4, 3, 8, 11, '#b28f52'); r(4, 5, 8, 6, '#ebe2ba');
+      r(5, 4, 6, 8, '#ebe2ba'); r(7, 5, 1, 4, '#3a4652'); r(7, 8, 3, 1, '#3a4652');
+      p(5, 5, '#fff5d3'); p(10, 11, '#a18c69');
+      return canvas;
+    }
+    if (kind === 'nduja_fritta') {
+      r(4, 4, 9, 8, '#571e26'); r(3, 6, 11, 5, '#ad3c37');
+      r(5, 5, 7, 6, '#d76c46'); r(6, 5, 3, 1, '#f3ad68');
+      r(2, 7, 2, 3, '#e4cc9b'); r(13, 5, 2, 3, '#e4cc9b');
+      p(7, 8, '#ffcf95'); p(10, 7, '#ffcf95');
+      return canvas;
+    }
+    if (kind === 'coin_bag' || kind === 'rich_bag') {
+      const rich = kind === 'rich_bag';
+      r(5, 2, 6, 3, '#745338'); r(6, 4, 4, 2, '#e2bf72');
+      r(4, 6, 8, 7, '#3d2e24'); r(3, 8, 10, 4, '#3d2e24');
+      r(5, 6, 6, 7, rich ? '#b1843a' : '#8e6e49');
+      r(4, 8, 8, 4, rich ? '#cba352' : '#a38258');
+      r(6, 8, 4, 4, '#e5c87b'); r(7, 9, 2, 2, '#a07530');
+      if (rich) { r(11, 11, 3, 2, '#edcc6c'); p(12, 11, '#fff0b6'); }
+      return canvas;
+    }
+
+    // Coins retain a rounded, beveled outline distinct from bags and consumables.
     for (let y = 4; y <= 12; y++) {
       for (let x = 4; x <= 12; x++) {
+        if ((x === 4 || x === 12) && (y < 6 || y > 10)) continue;
+        if ((y === 4 || y === 12) && (x < 6 || x > 10)) continue;
         p(x, y, '#b45309');
       }
     }

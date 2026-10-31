@@ -10,5 +10,17 @@
       "categories": [],
       "coverId": null
     }
+  },
+  "long-night-embers-h5": {
+    "slug": "long-night-embers-h5",
+    "create": {
+      "title": "永夜余烬",
+      "summary": "精细像素风的单人自动攻击生存游戏，走位迎战敌潮并组合武器进化。",
+      "description": "控制角色在持续增强的敌潮中生存，自动施放武器，收集经验并选择升级，组合被动道具完成武器进化。包含多位角色、关卡、局外成长和三槽位本地存档。",
+      "instructions": "WASD 或方向键移动，武器自动攻击；空格键暂停或继续，升级时点击选择强化。支持本地存档与继续进度。",
+      "devices": ["desktop"],
+      "categories": [],
+      "coverId": null
+    }
   }
 }

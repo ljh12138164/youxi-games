@@ -13,6 +13,8 @@ test('战场贴图边角透明，菜单图标保留槽位底色', async () => {
     await page.goto(server.resolvedUrls?.local[0]);
     const result = await page.evaluate(async () => {
       const art = await import('/games/long-night-embers-h5/src/render/pixelArt.ts');
+      const { prepareApprovedArt } = await import('/games/long-night-embers-h5/src/render/approvedArt.ts');
+      await prepareApprovedArt();
       const ids = ['fire_wand', 'magic_wand', 'knife', 'king_bible', 'cross', 'axe'];
       return Promise.all(ids.map(async (id) => {
         const canvas = art.getItemTexture(id).source.resource;
@@ -35,6 +37,8 @@ test('战场贴图边角透明，菜单图标保留槽位底色', async () => {
     }
     const projectiles = await page.evaluate(async () => {
       const art = await import('/games/long-night-embers-h5/src/render/pixelArt.ts');
+      const { prepareApprovedArt } = await import('/games/long-night-embers-h5/src/render/approvedArt.ts');
+      await prepareApprovedArt();
       const { WEAPONS } = await import('/games/long-night-embers-h5/src/content/ledger.ts');
       return WEAPONS.filter(w => w.scope !== 'dlc_excluded').map(w => {
         const canvas = art.getProjectileTexture(w.id, w.behavior, w.color).source.resource;
