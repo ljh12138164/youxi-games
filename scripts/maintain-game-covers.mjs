@@ -9,15 +9,12 @@ assert.equal(process.env.GITHUB_REPOSITORY, repository);
 assert.equal(process.env.GITHUB_REF, 'refs/heads/main');
 assert.equal(process.env.GITHUB_EVENT_NAME, 'workflow_dispatch');
 const origin = 'https://scalia.ltd';
-const targets = [
-  ['card-realms-h5', '6ea05ad2-1350-479c-9b2a-4bcb61fd8386'],
-  ['long-night-embers-h5', '8b7f8c7a-56f6-4e54-9d06-58695a3284df'],
-];
-const oldId = 'ec08f6cf-59a9-4c9a-b917-f1bc90ad492b';
+const slug = process.env.COVER_SLUG ?? 'backpack-expedition-h5';
+assert.ok(['card-realms-h5', 'long-night-embers-h5', 'backpack-expedition-h5'].includes(slug), 'Unknown cover target');
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const cloud = await openCloudState({ repository, token: process.env.GH_TOKEN, key: process.env.SCALIA_STATE_KEY });
 let credential = cloud.value.credential;
-const report = { sha: process.env.GITHUB_SHA, games: [], oldGame: null };
+const report = { sha: process.env.GITHUB_SHA, games: [] };
 const mask = value => console.log(`::add-mask::${value}`);
 mask(credential.accessToken); mask(credential.refreshToken);
 assert.equal(credential.origin, origin);
@@ -56,17 +53,8 @@ async function api(action, input, key) {
 
 try {
   // Narrow maintenance operation: no delete, create, site-config, or game-file actions.
-  const old = await api('get_game', { gameId: oldId });
-  assert.equal(old.id, oldId); assert.equal(old.slug, 'stacklands-h5');
-  if (old.availability === 'enabled') {
-    await api('set_game_availability', { gameId: oldId, available: false, expectedStateRevision: old.stateRevision },
-      `retire-stacklands-${old.stateRevision}`);
-  }
-  const retired = await api('get_game', { gameId: oldId });
-  assert.equal(retired.availability, 'disabled');
-  report.oldGame = { gameId: oldId, slug: retired.slug, status: 'disabled', permanentlyDeleted: false };
-
-  for (const [slug, gameId] of targets) {
+  for (const gameId of [cloud.value.releaseState.bindings[slug]?.gameId]) {
+    assert.ok(typeof gameId === 'string' && /^[0-9a-f-]{36}$/i.test(gameId), 'Game must be published and bound before cover maintenance');
     const bytes = readFileSync(new URL(`../deploy/covers/${slug}.jpg`, import.meta.url));
     assert.ok(bytes.length <= 512000, 'Cover exceeds platform limit');
     assert.equal(cloud.value.releaseState.bindings[slug]?.gameId, gameId);

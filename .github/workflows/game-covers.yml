@@ -1,7 +1,16 @@
-name: Game covers and legacy retirement
+name: Publish game cover
 
 on:
   workflow_dispatch:
+    inputs:
+      slug:
+        description: Game to update
+        type: choice
+        default: backpack-expedition-h5
+        options:
+          - backpack-expedition-h5
+          - card-realms-h5
+          - long-night-embers-h5
 
 permissions:
   contents: write
@@ -22,11 +31,12 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 26
-      - name: Publish covers and retire only the named legacy game
+      - name: Upload and publish the selected game cover
         env:
           GH_TOKEN: ${{ github.token }}
           SCALIA_STATE_KEY: ${{ secrets.SCALIA_STATE_KEY }}
           MAINTENANCE_REPORT: ${{ runner.temp }}/cover-maintenance.json
+          COVER_SLUG: ${{ inputs.slug }}
         run: node scripts/maintain-game-covers.mjs
       - name: Save maintenance receipt
         if: always()
