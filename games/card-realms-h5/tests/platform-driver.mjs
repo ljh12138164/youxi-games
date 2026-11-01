@@ -9,8 +9,10 @@ export async function readState({ frame }) {
 
 export async function start(context) {
   const { frame, page } = context;
-  const home=frame.getByRole('button',{name:/^(进入牌桌|继续游戏)$/});
-  if(await home.count())await home.click();
+  const home = frame.getByRole('button', { name: /^(进入牌桌|继续游戏)$/ });
+  if (await frame.locator('.cr-home').count()) {
+    await home.click();
+  }
   await frame.getByRole('button', { name: '▶ 1x', exact: true }).click();
   const before = await readState(context);
   assert.equal(before.running, true);
