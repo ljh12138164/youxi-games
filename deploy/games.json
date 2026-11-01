@@ -11,6 +11,18 @@
       "coverId": null
     }
   },
+  "backpack-expedition-h5": {
+    "slug": "backpack-expedition-h5",
+    "create": {
+      "title": "背包远征",
+      "summary": "暖色像素风的背包构筑冒险：整理行囊、搭配装备，在三层森林遗迹中迎战敌人。",
+      "description": "整理背包里的武器、盾牌、护符和补给，通过旋转摆放与相邻加成搭配装备，在三层森林遗迹中进行回合制战斗。包含路线选择、战利品整理、商店、营地、图鉴与轻松、标准、挑战三档难度，支持本地存档和断点续玩。",
+      "instructions": "拖动物品整理背包，按 R 旋转，也可以先选物品再点空格。战斗时先点击武器，再点击敌人攻击；盾牌、药剂和干粮点击即用。空格暂停，Esc 关闭详情或取消选择。地上物品放回背包才能带走。",
+      "devices": ["desktop"],
+      "categories": [],
+      "coverId": null
+    }
+  },
   "long-night-embers-h5": {
     "slug": "long-night-embers-h5",
     "create": {
