@@ -27,6 +27,7 @@ import {
   getTotalPowerUpRefund,
 } from './core/engine.ts';
 import type { ActiveModesConfig, CheatAction, ModeId } from './core/types.ts';
+import { DIFFICULTIES, difficultyOf, type Difficulty } from './core/difficulty.ts';
 import {
   SingleWriterCoordinator,
   importJsonToSlot,
@@ -77,6 +78,9 @@ export function App() {
   const { run, profile, derived, pauseReasons, isRunning } = snapshot;
 
   const [screenMode, setScreenMode] = useState<ScreenMode>('title');
+  const screenModeRef=useRef(screenMode);screenModeRef.current=screenMode;
+  const [ready,setReady]=useState(false);
+  useEffect(()=>{singletonEngine.dispatch({type:'SET_PAUSE_REASON',reason:'home',active:true});},[]);
   const [activeModal, setActiveModal] = useState<ActiveModal>('none');
   const activeModalRef = useRef<ActiveModal>(activeModal);
   activeModalRef.current = activeModal;
@@ -91,6 +95,7 @@ export function App() {
   const [selCharId, setSelCharId] = useState<string>('torchguard_torren');
   const [selStageId, setSelStageId] = useState<string>('mad_forest');
   const [selModes, setSelModes] = useState<ActiveModesConfig>(createDefaultModes);
+  const [selDifficulty, setSelDifficulty] = useState<Difficulty>('normal');
   const [spellInput, setSpellInput] = useState('');
   const [importJsonText, setImportJsonText] = useState('');
 
@@ -142,6 +147,7 @@ export function App() {
       const summaries = await listSlotSummaries();
       if (!cancelled) {
         setSlotSummaries(summaries);
+        setReady(true);
         bridgeRef.current?.notifyGameReady();
       }
     }
@@ -238,6 +244,10 @@ export function App() {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       const target = e.target as HTMLElement | null;
       if (target && target.closest('input,textarea,select,[contenteditable="true"]')) return;
+      if(screenModeRef.current==='title'){
+        if(e.code==='Escape'&&activeModalRef.current!=='none')openModal('none');
+        return;
+      }
 
       if (e.code === 'Escape') {
         e.preventDefault();
@@ -321,6 +331,8 @@ export function App() {
   }
 
   function resumeCombat() {
+    if(!ready)return;
+    singletonEngine.dispatch({type:'SET_PAUSE_REASON',reason:'home',active:false});
     if (pauseReasons.includes('performance')) {
       singletonEngine.dispatch({
         type: 'SET_PAUSE_REASON',
@@ -329,6 +341,7 @@ export function App() {
       });
     }
     setScreenMode('battle');
+    screenModeRef.current='battle';
     setActiveModal('none');
     singletonEngine.dispatch({
       type: 'SET_PAUSE_REASON',
@@ -342,6 +355,17 @@ export function App() {
     });
   }
 
+  function returnHome(){
+    singletonEngine.dispatch({type:'SET_MOVE_INPUT',x:0,y:0});
+    singletonEngine.dispatch({type:'SET_PAUSE_REASON',reason:'home',active:true});
+    keysPressedRef.current.clear();setScreenMode('title');screenModeRef.current='title';
+    setActiveModal('none');
+    if(writerRef.current?.canWrite()){
+      const snap=singletonEngine.getSnapshot();
+      void saveSlotBundle(snap.profile.slotId,snap.run,snap.profile).then(saved=>{if(saved.warning)setStatusMessage(saved.warning);});
+    }
+  }
+
   async function handleStartConfiguredRun(
     adventureId: string | null = null,
     chapterId: string | null = null,
@@ -351,19 +375,26 @@ export function App() {
       characterId: selCharId,
       stageId: selStageId,
       modes: selModes,
+      difficulty: selDifficulty,
       adventureId,
       adventureChapterId: chapterId,
     });
     const snap = singletonEngine.getSnapshot();
-    await saveSlotBundle(snap.profile.slotId, snap.run, snap.profile);
+    const saved = await saveSlotBundle(snap.profile.slotId, snap.run, snap.profile);
     setScreenMode('battle');
+    screenModeRef.current='battle';
+    singletonEngine.dispatch({type:'SET_PAUSE_REASON',reason:'home',active:false});
     setActiveModal('none');
-    setStatusMessage(null);
+    setStatusMessage(saved.warning ?? null);
   }
 
   async function handleSwitchSlot(slotId: 1 | 2 | 3) {
     if (writerRef.current?.canWrite()) {
-      await saveSlotBundle(profile.slotId, run, profile);
+      const saved = await saveSlotBundle(profile.slotId, run, profile);
+      if (!saved.ok) {
+        setStatusMessage(saved.warning ?? '保存失败，已保留当前进度');
+        return;
+      }
     }
     const loaded = await loadSlotBundle(slotId);
     if (loaded.run) {
@@ -718,6 +749,7 @@ export function App() {
       data-running={String(isRunning)}
       data-tick={String(run.tick)}
     >
+      <div className="contents" inert={screenMode==='title'} aria-hidden={screenMode==='title'}>
       {/* 1. Full-Screen PixiJS 8 Battlefield */}
       <main className="lne-battlefield-fullscreen">
         <BattlefieldCanvas engine={singletonEngine} />
@@ -831,7 +863,7 @@ export function App() {
 
           {/* Top-Right: Kills, Coins & Pause/Menu Controls */}
           <div className="lne-hud-right">
-            <div className="lne-counter-strip">
+            <div className="lne-counter-strip"><span className="lne-counter-badge">{difficultyOf(run).name}</span>
               <span className="lne-counter-badge" title="本局击杀数">
                 💀 {run.stats.kills.toLocaleString()}
               </span>
@@ -841,6 +873,7 @@ export function App() {
             </div>
 
             <div className="lne-hud-action-row">
+              <button type="button" className="lne-gothic-btn" onClick={returnHome}>首页</button>
               <button
                 type="button"
                 className="lne-gothic-btn lne-gothic-btn-gold"
@@ -906,10 +939,12 @@ export function App() {
               <button
                 type="button"
                 className="lne-gothic-btn lne-gothic-btn-sm"
-                onClick={() => {
+                onClick={async () => {
                   writerRef.current?.claimWriter();
+                  const loaded = await loadSlotBundle(profile.slotId);
+                  if (loaded.run) singletonEngine.loadState(loaded.run, loaded.profile);
                   setWriterConflict(false);
-                  setStatusMessage('已重新接管当前窗口写入权限。');
+                  setStatusMessage('已重新读取最新档案并接管写入；接管前可先导出当前进度。');
                 }}
               >
                 接管写入
@@ -963,17 +998,18 @@ export function App() {
           </button>
         </div>
       </main>
+      </div>
 
       {/* 4A. Dedicated Title / Home Screen (Issue 1: Home Screen before entering combat) */}
-      {screenMode === 'title' && activeModal === 'none' && run.phase === 'combat' && (
-        <div className="lne-home-screen">
+      {screenMode === 'title' && activeModal === 'none' && (
+        <section className="lne-home-screen" aria-label="永夜余烬首页">
           <div className="lne-home-top-bar">
             <button
               type="button"
               className="lne-royal-pill-btn lne-royal-pill-sm"
               onClick={() => openModal('saves')}
             >
-              档案 #{profile.slotId}
+              存档管理 · #{profile.slotId}
             </button>
 
             <div className="lne-home-gold-box">
@@ -992,8 +1028,9 @@ export function App() {
 
           <div className="lne-home-center">
             <div className="lne-home-crest">
-              <div className="lne-home-crest-sub">EMBERS OF THE LONG NIGHT · 哥特弹幕生存</div>
               <h1 className="lne-home-crest-title">永夜余烬</h1>
+              <p className="lne-home-edition">EMBERS OF THE LONG NIGHT</p>
+              <p>带上一件武器，走进怪物涌来的长夜。<br/>拾取经验，搭配进化，撑到天亮。</p>
               {identity?.user?.nickname && (
                 <div className="lne-home-player-tag">当前猎魔人：{identity.user.nickname}</div>
               )}
@@ -1033,9 +1070,17 @@ export function App() {
             </div>
 
             <div className="lne-home-buttons">
+              <p className="lne-home-save-summary">档案 {profile.slotId} · {stageDef.nameZh} · {difficultyOf(run).name} · {formatClock(run.stageClockTicks)} · 等级 {run.player.level}</p>
+              <label className="lne-home-difficulty">新远征难度
+                <select aria-label="新远征难度" value={selDifficulty} onChange={e=>setSelDifficulty(e.target.value as Difficulty)}>
+                  {Object.entries(DIFFICULTIES).map(([id,d])=><option key={id} value={id}>{d.name}{id==='normal'?'（推荐）':''}</option>)}
+                </select>
+              </label>
+              <p className="lne-home-difficulty-copy">{DIFFICULTIES[selDifficulty].description}</p>
               <button
                 type="button"
                 className="lne-home-start-btn"
+                disabled={!ready}
                 onClick={() => openModal('newRun')}
               >
                 开始游戏
@@ -1045,8 +1090,9 @@ export function App() {
                 type="button"
                 className="lne-royal-pill-btn"
                 onClick={resumeCombat}
+                disabled={!ready||run.phase==='settled'}
               >
-                {run.tick > 0 ? `继续进度 (${formatClock(run.stageClockTicks)})` : '直接出击当前角色'}
+                {run.phase==='settled'?'本局已结束':run.tick > 0 ? `继续进度 (${formatClock(run.stageClockTicks)})` : '直接出击当前角色'}
               </button>
 
               <div className="lne-home-btn-row">
@@ -1088,7 +1134,8 @@ export function App() {
               </div>
             </div>
           </div>
-        </div>
+          {statusMessage&&<p className="lne-home-notice" role="status">{statusMessage}</p>}
+        </section>
       )}
 
       {/* 4B. Pause / Grimoire Screen (: Left Stat Sheet + Center Evolution Chart + Right Arcana + Bottom Royal Blue Buttons) */}
@@ -1153,7 +1200,7 @@ export function App() {
             <button
               type="button"
               className="lne-royal-pill-btn"
-              onClick={() => setScreenMode('title')}
+              onClick={returnHome}
             >
               返回首页
             </button>
@@ -1178,7 +1225,7 @@ export function App() {
       )}
 
       {/* 5. Level-Up / Arcana / Survarot Choice Modal */}
-      {run.phase === 'choice' && run.pendingChoice && (
+      {screenMode==='battle' && run.phase === 'choice' && run.pendingChoice && (
         <div className="lne-modal-backdrop">
           <div className="lne-levelup-layout">
             {renderStatSheet()}
@@ -1266,7 +1313,7 @@ export function App() {
       )}
 
       {/* 6. Treasure Chest Modal */}
-      {run.phase === 'chest' && run.pendingChest && (
+      {screenMode==='battle' && run.phase === 'chest' && run.pendingChest && (
         <div className="lne-modal-backdrop">
           <div className="lne-gothic-modal lne-chest-modal">
             <h2 className="lne-gothic-title lne-gold-text">
@@ -1316,7 +1363,7 @@ export function App() {
       )}
 
       {/* 7. Run Settlement / Game Over Modal */}
-      {run.phase === 'settled' && run.settlement && (
+      {screenMode==='battle' && run.phase === 'settled' && run.settlement && (
         <div className="lne-modal-backdrop">
           <div className="lne-gothic-modal">
             <h2 className="lne-gothic-title">
@@ -1514,6 +1561,15 @@ export function App() {
               {/* Right Column: Stage Checklist & Rules + Green Confirm Button (matches right side of ) */}
               <div className="lne-charselect-right-col">
                 <div className="lne-royal-header-banner">关卡与法则配置</div>
+                <div className="lne-difficulty-picker">
+                  <label className="flex items-center justify-between gap-3">难度
+                    <select aria-label="难度" value={selDifficulty} onChange={e=>setSelDifficulty(e.target.value as Difficulty)}>
+                      {Object.entries(DIFFICULTIES).map(([id,d])=><option key={id} value={id}>{d.name}{id==='normal'?'（推荐）':''}</option>)}
+                    </select>
+                  </label>
+                  <p>{DIFFICULTIES[selDifficulty].description}</p>
+                  <small>难度随本局保存，仅在确认出击后生效；关卡词缀可另行叠加。</small>
+                </div>
 
                 <div className="lne-stage-checklist-box">
                   <div className="lne-stage-list-title">选择出击地图</div>
@@ -1876,7 +1932,7 @@ export function App() {
                           if (res.run && res.profile) {
                             singletonEngine.loadState(res.run, res.profile);
                             setStatusMessage(`已恢复档案 ${s.slotId} 的最近备份。`);
-                          }
+                          } else setStatusMessage(res.error ?? '恢复备份失败');
                         }}
                       >
                         恢复备份

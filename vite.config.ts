@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { discoverGames, projectRoot } from './scripts/games.mjs';
 import { thirdPartyNoticesPlugin } from './scripts/third-party-notices.mjs';
 
@@ -9,7 +10,7 @@ export default defineConfig({
   base: './',
   appType: 'mpa',
   publicDir: false,
-  plugins: [react(), thirdPartyNoticesPlugin(projectRoot)],
+  plugins: [react(), tailwindcss(), thirdPartyNoticesPlugin(projectRoot)],
   resolve: {
     alias: { '@shared': resolve(projectRoot, 'shared') },
   },

@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {mkdir} from 'node:fs/promises';
+import {chromium} from 'playwright';
+import {createServer} from 'vite';
+
+test('行动按钮优先显示，选择武器后明确提示并高亮敌人，攻击与失效状态正确',async()=>{
+  const server=process.env.GAME_TEST_BASE_URL?null:await createServer({server:{host:'127.0.0.1',port:0,open:false}});await server?.listen();
+  const browser=await chromium.launch();
+  try{
+    const page=await browser.newPage({viewport:{width:1280,height:900}}),errors=[];
+    page.on('pageerror',e=>errors.push(e.message));
+    await page.goto(`${process.env.GAME_TEST_BASE_URL??server.resolvedUrls.local[0]}games/backpack-expedition-h5/`);
+    await page.evaluate(async()=>{const {newRun}=await import('/games/backpack-expedition-h5/src/engine.ts');localStorage.setItem('youxi:backpack-expedition-h5:v1',JSON.stringify(newRun(42)));});
+    await page.reload();await page.getByRole('button',{name:'继续远征',exact:true}).click();
+    const read=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('youxi:backpack-expedition-h5:v1')));
+    await page.getByRole('button',{name:/林间遭遇/}).click();
+    const actions=page.getByRole('region',{name:'当前行动',exact:true}),ground=page.getByRole('region',{name:'地上物品',exact:true});
+    assert.ok((await actions.boundingBox()).y<(await ground.boundingBox()).y,'开始战斗必须放在地上区域之前');
+    await mkdir('reports/backpack-expedition-h5',{recursive:true});
+    await page.screenshot({path:'reports/backpack-expedition-h5/prepare-actions-top.png',fullPage:true});
+    await page.getByRole('button',{name:/开始战斗/}).click();
+    assert.ok((await page.locator('.combat-hint').innerText()).includes('先点背包里的武器'));
+    const staff=page.getByRole('button',{name:'嫩枝杖，背包内，1 能量',exact:true});
+    await staff.click();
+    assert.ok((await page.locator('.combat-hint').innerText()).includes('再点击上方高亮的敌人攻击'));
+    const detail=page.getByRole('dialog',{name:'嫩枝杖详情',exact:true});
+    assert.ok((await detail.innerText()).includes('再点击上方高亮的敌人攻击'));
+    await detail.getByRole('button',{name:'去选择敌人 ↑',exact:true}).click();
+    assert.equal(await page.locator('.item-tooltip').count(),0);
+    const enemy=page.locator('.enemy.attack-target').first();await enemy.waitFor();
+    const before=await read(),enemyUid=before.enemies[0].uid;
+    await page.screenshot({path:'reports/backpack-expedition-h5/combat-targets.png',fullPage:true});
+    await enemy.click();
+    const after=await read();assert.ok(after.enemies.find(e=>e.uid===enemyUid).hp<before.enemies[0].hp);assert.equal(after.energy,before.energy-1);
+    assert.equal(await page.locator('.enemy.attack-target').count(),0);
+    await staff.click();assert.ok((await page.locator('.combat-hint').innerText()).includes('本回合已经用过'));
+    assert.equal(await page.locator('.enemy.attack-target').count(),0);
+    await page.keyboard.press('Escape');
+    await page.setViewportSize({width:390,height:844});
+    const inventory=await page.getByRole('region',{name:'背包整理',exact:true}).boundingBox();
+    assert.ok((await actions.boundingBox()).y<inventory.y,'小屏行动区也应在背包上方');
+    await page.getByRole('button',{name:/结束回合/}).click();
+    await staff.click();await page.getByRole('dialog',{name:'嫩枝杖详情',exact:true}).getByRole('button',{name:'去选择敌人 ↑',exact:true}).click();
+    const targetBox=await page.locator('.enemy.attack-target').first().boundingBox();
+    assert.ok(targetBox.y>=0&&targetBox.y+targetBox.height<=844,'定位敌人后应在可见屏幕内');
+    await page.screenshot({path:'reports/backpack-expedition-h5/combat-guidance-mobile.png',fullPage:true});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    assert.deepEqual(errors,[]);
+  }finally{await browser.close();await server?.close();}
+});

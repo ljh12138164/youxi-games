@@ -1,0 +1,5 @@
+/* Keep each game's existing reset and visual defaults. Sources are registered
+   by the importing entry so standalone builds never scan other games. */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);

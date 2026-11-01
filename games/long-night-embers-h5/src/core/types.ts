@@ -419,6 +419,7 @@ export type AdventureDefinition = {
 };
 
 export type PauseReason =
+  | 'home'
   | 'manual'
   | 'choice'
   | 'chest'
@@ -620,6 +621,7 @@ export type SettlementState = {
 export type ActiveModesConfig = Record<ModeId, boolean>;
 
 export type RunState = {
+  difficulty?: import('./difficulty.ts').Difficulty;
   schemaVersion: number;
   contentVersion: string;
   baselineId: string;

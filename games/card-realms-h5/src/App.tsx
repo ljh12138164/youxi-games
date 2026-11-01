@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { YouxiIdentity } from '@shared/platform';
 import { SoundController } from './audio/sound.ts';
 import { TabletopBoard } from './board/TabletopBoard.tsx';
+import { HomeScreen } from './HomeScreen.tsx';
 import {
   BASELINE_ID,
   BOOSTER_PACKS,
@@ -37,6 +38,8 @@ import {
 import { CardRealmsPlatformBridge } from './platform/bridge.ts';
 
 type DrawerTab = 'inspector' | 'quests' | 'ideas' | 'cardopedia';
+import { DIFFICULTIES, difficultyOf, type Difficulty } from './core/difficulty.ts';
+
 type ActiveModal = 'none' | 'newGame' | 'saves' | 'settings';
 
 const singletonEngine = new CardRealmsEngine();
@@ -45,8 +48,13 @@ const singletonSound = new SoundController();
 export function App() {
   const snapshot = useSyncExternalStore(singletonEngine.subscribe, singletonEngine.getSnapshot);
   const { run, profile, pauseReasons, isRunning } = snapshot;
+  const [home,setHome] = useState(true);
+  const homeRef=useRef(home);homeRef.current=home;
+  const [ready,setReady]=useState(false);
+  useEffect(()=>{singletonEngine.dispatch({type:'SET_PAUSE_REASON',reason:'home',active:true});},[]);
 
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
+  const [revealedCardIds, setRevealedCardIds] = useState<Set<string>>(new Set());
   const [drawerTab, setDrawerTab] = useState<DrawerTab>('quests');
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
   const [activeModal, setActiveModal] = useState<ActiveModal>('none');
@@ -59,6 +67,7 @@ export function App() {
   // New game form options
   const [newGameSlot, setNewGameSlot] = useState<1 | 2 | 3>(1);
   const [newGameMonthLen, setNewGameMonthLen] = useState<MonthLengthOption>('normal');
+  const [newGameDifficulty, setNewGameDifficulty] = useState<Difficulty>('normal');
   const [newGamePeaceful, setNewGamePeaceful] = useState(false);
   const [importJsonText, setImportJsonText] = useState('');
 
@@ -109,6 +118,7 @@ export function App() {
       const summaries = await listSlotSummaries();
       if (!cancelled) {
         setSlotSummaries(summaries);
+        setReady(true);
         bridgeRef.current?.notifyGameReady();
       }
     }
@@ -180,6 +190,7 @@ export function App() {
   // Keyboard shortcuts (Space / custom pause key, never intercepting Alt+M / Alt+Q / Alt+Shift+Q)
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      if(homeRef.current)return;
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       const target = e.target as HTMLElement | null;
       if (target && target.closest('input,textarea,select,[contenteditable="true"]')) return;
@@ -204,6 +215,17 @@ export function App() {
     setSlotSummaries(await listSlotSummaries());
   }
 
+  function enterGame(){
+    setHome(false);homeRef.current=false;
+    singletonEngine.dispatch({type:'SET_PAUSE_REASON',reason:'home',active:false});
+    singletonEngine.dispatch({type:'SET_PAUSE_REASON',reason:'manual',active:false});
+  }
+  function returnHome(){
+    singletonEngine.dispatch({type:'SET_PAUSE_REASON',reason:'home',active:true});
+    setHome(true);homeRef.current=true;
+    if(writerRef.current?.canWrite())void handleManualSave();
+  }
+
   function openModal(modal: ActiveModal) {
     setActiveModal(modal);
     singletonEngine.dispatch({
@@ -223,6 +245,7 @@ export function App() {
         seed: Date.now() >>> 0,
         monthLengthOption: newGameMonthLen,
         peacefulMode: newGamePeaceful,
+        difficulty: newGameDifficulty,
       },
       profile,
     );
@@ -231,6 +254,7 @@ export function App() {
     await refreshSlots();
     setStatusMessage(`已在槽位 ${newGameSlot} 创建新局。`);
     openModal('none');
+    enterGame();
   }
 
   async function handleSwitchSlot(slotId: 1 | 2 | 3) {
@@ -325,6 +349,8 @@ export function App() {
       data-running={isRunning}
       data-tick={run.tickCount}
     >
+      {home&&<HomeScreen run={run} ready={ready} difficulty={newGameDifficulty} notice={statusMessage} onContinue={enterGame} onNew={()=>openModal('newGame')} onSaves={()=>openModal('saves')} onSettings={()=>openModal('settings')} onDifficulty={value=>{setNewGameDifficulty(value);setNewGameMonthLen(DIFFICULTIES[value].monthLength);}}/>}
+      <div className="sl-play-surface" inert={home} aria-hidden={home}>
       {/* Top HUD Bar */}
       <header className="sl-hud">
         <div className="sl-brand">
@@ -361,7 +387,7 @@ export function App() {
 
           <div className="hud-month-box" title="当前月份与进度">
             <div className="hud-month-label">
-              <span>第 {run.month} 月</span>
+              <span>第 {run.month} 月 · {difficultyOf(run).name}{run.peacefulMode ? ' · 和平' : ''}</span>
               <span>{monthProgressPct}%</span>
             </div>
             <div className="hud-month-bar">
@@ -412,6 +438,7 @@ export function App() {
               );
             })}
           </div>
+          <button type="button" className="btn-top" onClick={returnHome}>首页</button>
           <button type="button" className="btn-top" onClick={() => openModal('newGame')}>
             新游戏
           </button>
@@ -439,8 +466,12 @@ export function App() {
                 disabled={!canAfford}
                 className={`pack-btn ${unlocked ? '' : 'pack-locked'}`}
                 onClick={() => {
+                  const before = new Set(Object.keys(singletonEngine.getSnapshot().run.instances));
                   const ok = singletonEngine.dispatch({ type: 'BUY_PACK', packId: pack.id });
-                  if (ok) singletonSound.play('pack');
+                  if (ok) {
+                    singletonSound.play('pack');
+                    setRevealedCardIds(new Set(Object.keys(singletonEngine.getSnapshot().run.instances).filter(id => !before.has(id))));
+                  }
                 }}
                 title={pack.description}
               >
@@ -485,6 +516,7 @@ export function App() {
       {/* Main Workspace: Tabletop + Collapsible Side Drawer */}
       <div className="sl-workspace">
         <TabletopBoard
+          revealedCardIds={revealedCardIds}
           engine={singletonEngine}
           run={run}
           sound={singletonSound}
@@ -751,7 +783,8 @@ export function App() {
       </div>
 
       {/* Month-End Settlement Modal */}
-      {run.monthEndPhase !== null && !run.isGameOver && (
+      </div>
+      {!home && run.monthEndPhase !== null && !run.isGameOver && (
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="月末生存结算">
           <div className="modal-card">
             <h2>🌙 第 {run.month} 月末生存结算</h2>
@@ -794,7 +827,7 @@ export function App() {
       )}
 
       {/* Game Over / Victory Modal */}
-      {(run.isGameOver || run.isVictory) && (
+      {!home && (run.isGameOver || run.isVictory) && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card">
             <h2>{run.isVictory ? '🏆 主线目标达成！' : '💀 聚落覆灭'}</h2>
@@ -840,6 +873,12 @@ export function App() {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card">
             <h2>开始新游戏</h2>
+            <label className="form-row"><span>难度：</span>
+              <select aria-label="难度" value={newGameDifficulty} onChange={e=>{const value=e.target.value as Difficulty;setNewGameDifficulty(value);setNewGameMonthLen(DIFFICULTIES[value].monthLength);}}>
+                {Object.entries(DIFFICULTIES).map(([id,d])=><option key={id} value={id}>{d.name}{id==='normal'?'（推荐）':''}</option>)}
+              </select>
+            </label>
+            <p className="muted-line">{DIFFICULTIES[newGameDifficulty].description}月份时长可以单独调整。难度仅在确认新局后生效。</p>
             <label className="form-row">
               <span>选择存档槽位：</span>
               <select

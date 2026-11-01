@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import { build } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 import { discoverGames, projectRoot } from './games.mjs';
 import { thirdPartyNoticesPlugin } from './third-party-notices.mjs';
@@ -19,7 +20,7 @@ await build({
   root: game.root,
   base: './',
   publicDir: false,
-  plugins: [react(), viteSingleFile(), thirdPartyNoticesPlugin(projectRoot)],
+  plugins: [react(), tailwindcss(), viteSingleFile(), thirdPartyNoticesPlugin(projectRoot)],
   resolve: {
     alias: { '@shared': resolve(projectRoot, 'shared') },
   },

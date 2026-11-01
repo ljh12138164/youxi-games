@@ -123,6 +123,7 @@ export function validateRunStatePayload(candidate: unknown): {
     return { valid: false, error: '存档格式无效：缺少根对象' };
   }
   const r = candidate as Partial<RunState>;
+  if (r.difficulty !== undefined && !['easy', 'normal', 'hard'].includes(r.difficulty)) return {valid:false,error:'存档难度无效'};
   if (typeof r.schemaVersion !== 'number') {
     return { valid: false, error: '存档缺少 schemaVersion' };
   }

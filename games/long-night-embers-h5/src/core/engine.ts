@@ -41,6 +41,8 @@ import type {
   SettlementState,
 } from './types.ts';
 
+import { difficultyOf, type Difficulty } from './difficulty.ts';
+
 export const SCHEMA_VERSION = 1;
 export const TICKS_PER_SECOND = 60;
 export const TICK_MS = 1000 / TICKS_PER_SECOND;
@@ -188,8 +190,9 @@ export function computeDerivedStats(run: RunState, profile: ProfileState): Deriv
   const advState = run.adventureId ? profile.adventures[run.adventureId] : undefined;
   const activePowerUpRanks = advState ? advState.powerUpRanks : profile.powerUpRanks;
 
-  let maxHp = charDef.baseHp;
-  let recovery = 0;
+  const difficulty = difficultyOf(run);
+  let maxHp = Math.round(charDef.baseHp * difficulty.hp);
+  let recovery = difficulty.recovery as number;
   let armor = 0;
   let moveSpeed = charDef.baseMoveSpeed + stageDef.moveSpeedBonus;
   let might = 1.0;
@@ -202,10 +205,10 @@ export function computeDerivedStats(run: RunState, profile: ProfileState): Deriv
   let growth = 1.0;
   let greed = 1.0 + stageDef.goldBonus;
   let curse = 1.0;
-  let magnet = 72;
-  let revival = 0;
-  let reroll = 0;
-  let skip = 0;
+  let magnet = difficulty.magnet as number;
+  let revival = difficulty.revival as number;
+  let reroll = difficulty.reroll as number;
+  let skip = difficulty.skip as number;
   let banish = 0;
 
   const applyModifier = (
@@ -402,6 +405,7 @@ export type CreateRunOptions = {
   modes?: Partial<ActiveModesConfig>;
   adventureId?: string | null;
   adventureChapterId?: string | null;
+  difficulty?: Difficulty;
 };
 
 export function createInitialRun(
@@ -470,6 +474,7 @@ export function createInitialRun(
     baselineId: BASELINE_ID,
     slotId,
     saveSeq: 1,
+    difficulty: options.difficulty ?? 'normal',
     runId: `run_${seed.toString(16)}_${slotId}`,
     rngState: seed === 0 ? 1 : seed,
     visualRngState: (seed ^ 0x9e3779b9) >>> 0,
@@ -1739,9 +1744,11 @@ export class LongNightEmbersEngine {
         const enemyCount = Object.keys(run.enemies).length;
         const interval = Math.max(
           8,
-          Math.round(activeWave.spawnIntervalTicks / Math.min(2.2, derived.curse)),
+          Math.round(activeWave.spawnIntervalTicks * (currentMinute < 3 ? difficultyOf(run).earlySpawn : difficultyOf(run).lateSpawn) / Math.min(2.2, derived.curse)),
         );
-        if (run.tick % interval === 0 || enemyCount < Math.min(16, activeWave.minQuota)) {
+        const quota = Math.min(currentMinute < 3 ? difficultyOf(run).earlyQuota : difficultyOf(run).lateQuota, activeWave.minQuota);
+        const refillDue = enemyCount < quota && run.tick % (currentMinute < 3 ? difficultyOf(run).refillTicks : 10) === 0;
+        if (run.tick % interval === 0 || refillDue) {
           const eid =
             activeWave.enemyIds[Math.floor(nextRandom(run) * activeWave.enemyIds.length)] ?? 'bat';
           spawnEnemyInstance(run, derived, eid);
@@ -2019,7 +2026,7 @@ export class LongNightEmbersEngine {
           run.player.hp = run.player.maxHp;
           continue;
         }
-        run.player.invulnerableTicks = 24;
+        run.player.invulnerableTicks = difficultyOf(run).invulnerability;
         if (run.player.laurelCharges > 0) {
           run.player.laurelCharges -= 1;
           if (hasCrimsonShroud) {
@@ -2028,7 +2035,7 @@ export class LongNightEmbersEngine {
           }
           continue;
         }
-        let incoming = Math.max(1, en.contactDamage - derived.armor);
+        let incoming = Math.max(1, Math.ceil(en.contactDamage * (en.isReaper ? 1 : difficultyOf(run).damage)) - derived.armor);
         if (hasCrimsonShroud) {
           incoming = Math.min(10, incoming);
           en.hp -= Math.max(100, Math.round(en.maxHp * 0.015));
@@ -2040,8 +2047,8 @@ export class LongNightEmbersEngine {
         if (run.player.hp <= 0) {
           if (run.player.revivalsUsed < derived.revival) {
             run.player.revivalsUsed += 1;
-            run.player.hp = Math.max(1, Math.round(run.player.maxHp * 0.5));
-            run.player.invulnerableTicks = 120;
+            run.player.hp = Math.max(1, Math.round(run.player.maxHp * 0.75));
+            run.player.invulnerableTicks = 180;
             // Push back nearby enemies on revival
             for (const other of Object.values(run.enemies)) {
               const odx = other.x - run.player.x;

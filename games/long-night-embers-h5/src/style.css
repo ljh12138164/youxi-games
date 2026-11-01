@@ -1,31 +1,24 @@
+@import "@shared/styles/tailwind.css";
+@source "./";
+.lne-difficulty-picker { @apply grid gap-3 p-4; background:#211e29;border:1px solid #8c7745;color:#f2dfb7; }
+.lne-difficulty-picker select {font:inherit;background:#15131c;color:#f2dfb7;border:1px solid #8c7745;padding:8px;}
+.lne-difficulty-picker p {font-size:13px;line-height:1.7;margin:0;}
+.lne-difficulty-picker small {font-size:11px;line-height:1.6;color:#c6bda7;}
 .lne-app {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
+  @apply relative w-screen h-screen overflow-hidden;
   background: #070910;
   color: #f8fafc;
   font-family: 'Courier New', 'Microsoft YaHei', system-ui, monospace;
-  user-select: none;
+  @apply select-none;
 }
 
 .lne-battlefield-fullscreen {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
+  @apply relative w-full h-full overflow-hidden;
   background: #070910;
 }
 
 .lne-canvas-host {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @apply absolute inset-0 w-full h-full overflow-hidden flex items-center justify-center;
   background: #090c14;
 }
 
@@ -35,11 +28,11 @@
   object-fit: cover !important;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  display: block;
+  @apply block;
 }
 
 .lne-webgl-error {
-  position: absolute;
+  @apply absolute;
   padding: 12px 16px;
   background: rgba(127, 29, 29, 0.95);
   border: 2px solid #facc15;
@@ -52,10 +45,7 @@
    ============================================================================ */
 
 .lne-top-xp-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  @apply absolute top-0 left-0 right-0;
   height: 24px;
   background: #070b14;
   border-bottom: 2px solid #d4af37;
@@ -63,11 +53,11 @@
     0 2px 4px rgba(0, 0, 0, 0.9),
     inset 0 1px 3px rgba(0, 0, 0, 0.9);
   z-index: 75;
-  overflow: hidden;
+  @apply overflow-hidden;
 }
 
 .lne-top-xp-fill {
-  height: 100%;
+  @apply h-full;
   background: linear-gradient(90deg, #1e40af 0%, #0284c7 45%, #38bdf8 85%, #bae6fd 100%);
   box-shadow:
     inset 0 2px 1px rgba(255, 255, 255, 0.4),
@@ -76,11 +66,7 @@
 }
 
 .lne-top-xp-label {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  @apply absolute inset-0 flex items-center justify-between;
   padding: 0 16px;
   font-size: 12px;
   font-weight: 900;
@@ -107,31 +93,26 @@
    ============================================================================ */
 
 .lne-hud-overlay {
-  position: absolute;
+  @apply absolute;
   top: 30px;
   left: 12px;
   right: 12px;
-  display: flex;
+  @apply flex;
   align-items: flex-start;
-  justify-content: space-between;
-  pointer-events: none;
+  @apply justify-between pointer-events-none;
   z-index: 80;
 }
 
 .lne-hud-inventory {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  pointer-events: auto;
+  @apply flex flex-col gap-[4px] pointer-events-auto;
 }
 
 .lne-equip-row {
-  display: flex;
-  gap: 4px;
+  @apply flex gap-[4px];
 }
 
 .lne-equip-box {
-  position: relative;
+  @apply relative;
   width: 38px;
   height: 38px;
   background: #090e1c;
@@ -139,9 +120,7 @@
   box-shadow:
     0 0 0 1px #05070c,
     inset 0 2px 5px rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @apply flex items-center justify-center;
   border-radius: 2px;
 }
 
@@ -168,7 +147,7 @@
 }
 
 .lne-equip-lvl {
-  position: absolute;
+  @apply absolute;
   right: 2px;
   bottom: 1px;
   font-size: 10px;
@@ -179,9 +158,7 @@
 }
 
 .lne-equip-overflow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  @apply flex flex-wrap gap-[4px];
   max-width: 280px;
 }
 
@@ -195,10 +172,7 @@
 
 /* Top-Center Clock */
 .lne-hud-clock-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: none;
+  @apply flex flex-col items-center pointer-events-none;
 }
 
 .lne-pixel-clock {
@@ -224,17 +198,11 @@
 
 /* Top-Right Kills & Gold & Action Bar */
 .lne-hud-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-  pointer-events: auto;
+  @apply flex flex-col items-end gap-[6px] pointer-events-auto;
 }
 
 .lne-counter-strip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  @apply flex items-center gap-[8px];
 }
 
 .lne-counter-badge {
@@ -263,9 +231,7 @@
 }
 
 .lne-hud-action-row {
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
+  @apply flex gap-[5px] flex-wrap;
 }
 
 /* ============================================================================
@@ -285,7 +251,7 @@
   font-size: 12px;
   font-weight: 800;
   text-shadow: 1px 1px 0 #000;
-  cursor: pointer;
+  @apply cursor-pointer;
   border-radius: 3px;
   transition: all 60ms ease;
 }
@@ -304,7 +270,7 @@
 
 .lne-gothic-btn:disabled {
   opacity: 0.45;
-  cursor: not-allowed;
+  @apply cursor-not-allowed;
 }
 
 .lne-gothic-btn-gold {
@@ -339,7 +305,7 @@
   background: #0b1120;
   border: 2px solid #ca8a04;
   box-shadow: 0 0 0 2px #000;
-  flex-shrink: 0;
+  @apply shrink-0;
 }
 
 .lne-option-pixel-icon {
@@ -349,7 +315,7 @@
   background: #0b1120;
   border: 2px solid #ca8a04;
   box-shadow: 0 0 0 2px #000;
-  flex-shrink: 0;
+  @apply shrink-0;
 }
 
 .lne-mini-icon,
@@ -373,17 +339,13 @@
     0 0 0 3px #05070c,
     inset 0 0 12px rgba(0, 0, 0, 0.85);
   padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  @apply flex flex-col gap-[10px];
   max-height: 82vh;
-  overflow-y: auto;
+  @apply overflow-y-auto;
 }
 
 .lne-stat-sheet-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  @apply flex items-center gap-[10px];
   padding-bottom: 8px;
   border-bottom: 2px solid #334155;
 }
@@ -407,14 +369,11 @@
 }
 
 .lne-stat-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  @apply flex flex-col gap-[3px];
 }
 
 .lne-stat-row {
-  display: flex;
-  justify-content: space-between;
+  @apply flex justify-between;
   font-size: 12px;
   padding: 2px 4px;
   background: rgba(9, 13, 22, 0.45);
@@ -431,9 +390,7 @@
 .lne-stat-dps-section {
   border-top: 2px solid #334155;
   padding-top: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  @apply flex flex-col gap-[4px];
 }
 
 .lne-stat-dps-title {
@@ -443,9 +400,7 @@
 }
 
 .lne-stat-dps-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  @apply flex items-center justify-between;
   font-size: 11px;
   background: rgba(9, 13, 22, 0.55);
   padding: 2px 4px;
@@ -456,24 +411,21 @@
    ============================================================================ */
 
 .lne-title-overlay {
-  position: absolute;
-  inset: 0;
+  @apply absolute inset-0;
   background:
     radial-gradient(circle at 50% 22%, rgba(185, 28, 28, 0.48) 0%, transparent 52%),
     radial-gradient(circle at center, rgba(45, 10, 18, 0.78) 0%, rgba(4, 6, 12, 0.94) 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @apply flex items-center justify-center;
   padding: 64px 20px 20px;
   z-index: 50;
 }
 
 .lne-title-layout {
-  display: flex;
+  @apply flex;
   align-items: stretch;
-  gap: 18px;
+  @apply gap-[18px];
   max-width: 960px;
-  width: 100%;
+  @apply w-full;
 }
 
 .lne-title-center-card {
@@ -486,14 +438,11 @@
     inset 0 0 28px rgba(0, 0, 0, 0.92),
     0 20px 48px rgba(0, 0, 0, 0.95);
   padding: 22px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 14px;
+  @apply flex flex-col justify-between gap-[14px];
 }
 
 .lne-logo-crest {
-  text-align: center;
+  @apply text-center;
   border-bottom: 3px double #b45309;
   padding-bottom: 12px;
   background: linear-gradient(180deg, rgba(127, 29, 29, 0.45) 0%, transparent 100%);
@@ -528,9 +477,7 @@
 }
 
 .lne-current-hero-showcase {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  @apply flex items-center gap-[14px];
   padding: 10px 14px;
   background: rgba(9, 13, 22, 0.72);
   border: 2px solid #475569;
@@ -542,13 +489,11 @@
   image-rendering: pixelated;
   background: #141c38;
   border: 2px solid #eab308;
-  flex-shrink: 0;
+  @apply shrink-0;
 }
 
 .lne-showcase-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  @apply flex flex-col gap-[4px];
 }
 
 .lne-showcase-info strong {
@@ -567,15 +512,11 @@
 }
 
 .lne-title-menu-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  @apply flex flex-col gap-[8px];
 }
 
 .lne-title-sub-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  @apply flex flex-wrap gap-[6px];
   margin-top: 4px;
 }
 
@@ -584,25 +525,22 @@
    ============================================================================ */
 
 .lne-modal-backdrop {
-  position: fixed;
-  inset: 0;
+  @apply fixed inset-0;
   background: rgba(4, 6, 10, 0.94);
   backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @apply flex items-center justify-center;
   padding: 16px;
   z-index: 9999;
-  overflow-y: auto;
+  @apply overflow-y-auto;
   box-sizing: border-box;
 }
 
 .lne-levelup-layout {
-  display: flex;
+  @apply flex;
   align-items: stretch;
-  gap: 16px;
+  @apply gap-[16px];
   max-width: 920px;
-  width: 100%;
+  @apply w-full;
 }
 
 .lne-gothic-modal {
@@ -613,12 +551,9 @@
     0 20px 50px rgba(0, 0, 0, 0.95);
   padding: 18px;
   max-width: 640px;
-  width: 100%;
+  @apply w-full;
   max-height: 82vh;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  @apply overflow-y-auto flex flex-col gap-[12px];
 }
 
 .lne-levelup-box {
@@ -630,16 +565,13 @@
 }
 
 .lne-modal-top-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  @apply flex items-center justify-between gap-[12px];
   border-bottom: 2px solid #334155;
   padding-bottom: 8px;
 }
 
 .lne-gothic-title {
-  margin: 0;
+  @apply m-0;
   font-size: 20px;
   font-weight: 900;
   color: #fef08a;
@@ -656,15 +588,11 @@
 }
 
 .lne-choice-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  @apply flex flex-col gap-[8px];
 }
 
 .lne-levelup-option {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  @apply flex items-center gap-[12px];
   padding: 10px 12px;
   background: #1e2952;
   border: 2px solid #94a3b8;
@@ -681,9 +609,7 @@
 }
 
 .lne-option-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  @apply flex items-center justify-between;
   margin-bottom: 4px;
 }
 
@@ -701,15 +627,13 @@
 }
 
 .lne-option-body p {
-  margin: 0;
+  @apply m-0;
   font-size: 12px;
   color: #cbd5e1;
 }
 
 .lne-levelup-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+  @apply flex justify-end gap-[10px];
   padding-top: 8px;
   border-top: 2px solid #334155;
 }
@@ -721,7 +645,7 @@
 }
 
 .lne-chest-gold-counter {
-  text-align: center;
+  @apply text-center;
   font-size: 24px;
   font-weight: 900;
   color: #fef08a;
@@ -730,20 +654,16 @@
 
 /* Character & Stage Grid Cards */
 .lne-char-grid {
-  display: grid;
+  @apply grid;
   grid-template-columns: repeat(auto-fill, minmax(225px, 1fr));
-  gap: 10px;
+  @apply gap-[10px];
 }
 
 .lne-char-card {
   padding: 10px;
   background: #0f172a;
   border: 2px solid #475569;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 8px;
-  cursor: pointer;
+  @apply flex flex-col justify-between gap-[8px] cursor-pointer;
 }
 
 .lne-char-card.lne-selected {
@@ -757,15 +677,11 @@
 }
 
 .lne-char-card-top {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  @apply flex items-center gap-[10px];
 }
 
 .lne-char-card-title {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  @apply flex flex-col gap-[3px];
 }
 
 .lne-char-card-title strong {
@@ -779,16 +695,16 @@
 }
 
 .lne-char-card p {
-  margin: 0;
+  @apply m-0;
   font-size: 11px;
   color: #cbd5e1;
   line-height: 1.4;
 }
 
 .lne-stage-grid {
-  display: grid;
+  @apply grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 10px;
+  @apply gap-[10px];
 }
 
 .lne-stage-card {
@@ -796,11 +712,7 @@
   background: #0f172a;
   border: 2px solid #475569;
   border-left-width: 8px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 6px;
-  cursor: pointer;
+  @apply flex flex-col justify-between gap-[6px] cursor-pointer;
 }
 
 .lne-stage-card.lne-selected {
@@ -809,9 +721,7 @@
 }
 
 .lne-stage-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  @apply flex justify-between items-center;
 }
 
 .lne-stage-header strong {
@@ -825,15 +735,14 @@
 }
 
 .lne-stage-card p {
-  margin: 0;
+  @apply m-0;
   font-size: 12px;
   color: #cbd5e1;
 }
 
 /* PowerUp Rank Pips */
 .lne-rank-pips {
-  display: flex;
-  gap: 3px;
+  @apply flex gap-[3px];
 }
 
 .lne-pip {
@@ -849,48 +758,37 @@
 
 /* Mode Checkboxes */
 .lne-mode-toggles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  @apply flex flex-wrap gap-[8px];
 }
 
 .lne-checkbox-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  @apply flex items-center gap-[6px];
   padding: 6px 10px;
   background: #0f172a;
   border: 2px solid #475569;
   font-size: 12px;
   font-weight: 700;
-  cursor: pointer;
+  @apply cursor-pointer;
 }
 
 .lne-choice-btns {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  @apply flex gap-[6px] flex-wrap;
 }
 
 /* Adventures & Spells */
 .lne-adv-chapters {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  @apply flex flex-col gap-[4px];
 }
 
 .lne-adv-chapter-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  @apply flex items-center justify-between;
   padding: 4px 6px;
   background: rgba(0, 0, 0, 0.35);
   font-size: 12px;
 }
 
 .lne-spell-bar {
-  display: flex;
-  gap: 8px;
+  @apply flex gap-[8px];
 }
 
 .lne-input,
@@ -905,9 +803,7 @@
 }
 
 .lne-settlement-summary {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  @apply flex items-center gap-[14px];
   padding: 12px;
   background: #0f172a;
   border: 2px solid #475569;
@@ -931,19 +827,15 @@
 }
 
 .lne-settings-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  @apply flex flex-col gap-[10px];
 }
 
 /* Toast Banner */
 .lne-toast-banner {
-  position: absolute;
+  @apply absolute;
   bottom: 18px;
   right: 18px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  @apply flex items-center gap-[10px];
   padding: 8px 14px;
   background: #172042;
   border: 2px solid #facc15;
@@ -955,13 +847,10 @@
 
 /* Bottom-Left Touch / Mouse D-Pad (Classic Retro Gamepad D-Pad) */
 .lne-touch-dpad {
-  position: absolute;
+  @apply absolute;
   left: 18px;
   bottom: 18px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  @apply flex flex-col items-center gap-[2px];
   opacity: 0.65;
   z-index: 40;
   transition: opacity 120ms ease;
@@ -972,8 +861,7 @@
 }
 
 .lne-dpad-mid {
-  display: flex;
-  gap: 28px;
+  @apply flex gap-[28px];
 }
 
 .lne-dpad-btn {
@@ -988,11 +876,9 @@
   color: #fde047;
   font-size: 13px;
   font-weight: 900;
-  cursor: pointer;
+  @apply cursor-pointer;
   border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @apply flex items-center justify-center;
   text-shadow: 1px 1px 0 #000;
   transition: all 50ms ease;
 }
@@ -1016,32 +902,24 @@
   max-width: 980px;
   width: 96vw;
   max-height: 88vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  @apply flex flex-col overflow-hidden;
   box-sizing: border-box;
 }
 
 .lne-guide-modal .lne-modal-top-row {
-  flex-shrink: 0;
+  @apply shrink-0;
 }
 
 .lne-guide-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  @apply flex flex-wrap gap-[8px];
   border-bottom: 2px solid #334155;
   padding-bottom: 8px;
-  flex-shrink: 0;
+  @apply shrink-0;
 }
 
 .lne-guide-content {
   flex: 1 1 auto;
-  overflow-y: auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  @apply overflow-y-auto min-h-0 flex flex-col gap-[12px];
   margin-top: 4px;
   padding-right: 6px;
   scrollbar-width: thin;
@@ -1067,12 +945,11 @@
 }
 
 .lne-guide-modal .lne-levelup-footer {
-  flex-shrink: 0;
+  @apply shrink-0;
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid #334155;
-  display: flex;
-  justify-content: flex-end;
+  @apply flex justify-end;
 }
 
 .lne-guide-build-card {
@@ -1080,15 +957,11 @@
   background: #0f172a;
   border: 2px solid #475569;
   border-left: 6px solid #eab308;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  @apply flex flex-col gap-[8px];
 }
 
 .lne-guide-build-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  @apply flex items-center gap-[10px];
 }
 
 .lne-guide-build-header strong {
@@ -1128,25 +1001,23 @@
 }
 
 .lne-guide-desc {
-  margin: 0;
+  @apply m-0;
   font-size: 12px;
   color: #cbd5e1;
   line-height: 1.5;
 }
 
 .lne-guide-combos {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  @apply flex flex-col gap-[8px];
   background: rgba(5, 7, 12, 0.55);
   padding: 8px 10px;
   border: 1px solid #1e293b;
 }
 
 .lne-combo-row {
-  display: flex;
+  @apply flex;
   align-items: flex-start;
-  gap: 8px;
+  @apply gap-[8px];
   font-size: 12px;
 }
 
@@ -1158,15 +1029,12 @@
 }
 
 .lne-combo-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  @apply flex flex-wrap gap-[6px];
   flex: 1;
 }
 
 .lne-item-pill {
-  display: inline-flex;
-  align-items: center;
+  @apply inline-flex items-center;
   padding: 2px 8px;
   background: #1e293b;
   border: 1px solid #475569;
@@ -1197,9 +1065,7 @@
 
 /* Tier list section */
 .lne-tier-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  @apply flex flex-col gap-[10px];
 }
 
 .lne-tier-title {
@@ -1222,24 +1088,20 @@
 }
 
 .lne-tier-grid {
-  display: grid;
+  @apply grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 10px;
+  @apply gap-[10px];
 }
 
 .lne-tier-card {
   padding: 10px;
   background: #0f172a;
   border: 2px solid #334155;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  @apply flex flex-col gap-[6px];
 }
 
 .lne-tier-card-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  @apply flex items-center gap-[8px];
 }
 
 .lne-tier-card-top strong {
@@ -1266,7 +1128,7 @@
 }
 
 .lne-tier-card p {
-  margin: 0;
+  @apply m-0;
   font-size: 11px;
   color: #94a3b8;
   line-height: 1.4;
@@ -1274,9 +1136,7 @@
 
 /* Tips list */
 .lne-tips-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  @apply flex flex-col gap-[10px];
 }
 
 .lne-tip-card {
@@ -1287,14 +1147,14 @@
 }
 
 .lne-tip-headline {
-  display: block;
+  @apply block;
   font-size: 14px;
   color: #fef08a;
   margin-bottom: 6px;
 }
 
 .lne-tip-card p {
-  margin: 0;
+  @apply m-0;
   font-size: 12px;
   color: #cbd5e1;
   line-height: 1.5;
@@ -1308,9 +1168,7 @@
   max-width: 980px;
   width: 96vw;
   max-height: 88vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  @apply flex flex-col overflow-hidden;
   box-sizing: border-box;
   border-color: #a855f7;
   outline-color: #581c87;
@@ -1322,9 +1180,7 @@
 }
 
 .lne-trainer-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  @apply flex items-center gap-[12px];
 }
 
 .lne-trainer-tag-live {
@@ -1370,26 +1226,19 @@
   padding: 14px 16px;
   background: #0f172a;
   border: 2px solid #334155;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  @apply flex flex-col gap-[10px];
 }
 
 .lne-cheat-gold-hero {
   background: radial-gradient(circle at 10% 20%, rgba(168, 85, 247, 0.25) 0%, #0f172a 80%);
   border-color: #eab308;
-  display: flex;
+  @apply flex;
   flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
+  @apply justify-between items-center flex-wrap gap-[16px];
 }
 
 .lne-cheat-gold-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  @apply flex flex-col gap-[4px];
 }
 
 .lne-cheat-gold-label {
@@ -1410,9 +1259,7 @@
 }
 
 .lne-cheat-input-group {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+  @apply flex gap-[8px] items-center;
 }
 
 .lne-cheat-num-input {
@@ -1422,9 +1269,7 @@
 }
 
 .lne-cheat-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  @apply flex flex-col gap-[10px];
 }
 
 .lne-cheat-section-title {
@@ -1441,15 +1286,15 @@
 }
 
 .lne-cheat-btn-grid {
-  display: grid;
+  @apply grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 10px;
+  @apply gap-[10px];
 }
 
 .lne-cheat-grid {
-  display: grid;
+  @apply grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  @apply gap-[12px];
 }
 
 .lne-cheat-action-btn {
@@ -1460,13 +1305,9 @@
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
-  cursor: pointer;
-  text-align: center;
+  @apply cursor-pointer text-center;
   transition: all 120ms ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+  @apply flex items-center justify-center gap-[6px];
 }
 
 .lne-cheat-action-btn:hover:not(:disabled) {
@@ -1525,11 +1366,7 @@
 }
 
 .lne-god-status-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
+  @apply flex items-center justify-between flex-wrap gap-[12px];
 }
 
 /* ============================================================================
@@ -1564,7 +1401,7 @@
   text-shadow:
     2px 2px 0 #000,
     -1px -1px 0 #000;
-  cursor: pointer;
+  @apply cursor-pointer;
 }
 
 .lne-royal-pill-btn:hover:not(:disabled) {
@@ -1605,7 +1442,7 @@
   text-shadow:
     2px 2px 0 #000,
     -1px -1px 0 #000;
-  cursor: pointer;
+  @apply cursor-pointer;
 }
 
 .lne-home-start-btn:hover:not(:disabled) {
@@ -1615,7 +1452,7 @@
 
 .lne-home-start-btn:disabled {
   opacity: 0.45;
-  cursor: not-allowed;
+  @apply cursor-not-allowed;
 }
 
 .lne-home-crimson-btn {
@@ -1632,7 +1469,7 @@
   font-size: 16px;
   font-weight: 900;
   text-shadow: 2px 2px 0 #000;
-  cursor: pointer;
+  @apply cursor-pointer;
 }
 
 .lne-home-crimson-btn:hover:not(:disabled) {
@@ -1641,23 +1478,18 @@
 
 /* Dedicated Home / Title Screen: Dark Gothic Aesthetic */
 .lne-home-screen {
-  position: absolute;
-  inset: 0;
+  @apply absolute inset-0;
   z-index: 90;
   background:
     radial-gradient(ellipse at 50% 20%, rgba(138, 24, 38, 0.45) 0%, rgba(9, 11, 18, 0.96) 65%),
     radial-gradient(circle at 50% 80%, rgba(18, 22, 36, 0.9) 0%, #05070b 100%);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 58px 28px 26px;
+  @apply flex flex-col justify-between;
+  padding: 28px 28px 26px;
+  overflow-y:auto;
 }
 
 .lne-home-top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 24px;
+  @apply flex items-center justify-center gap-[24px];
 }
 
 .lne-home-gold-box {
@@ -1667,9 +1499,7 @@
   border: 3px solid #d4af37;
   border-radius: 6px;
   box-shadow: 0 0 0 2px #000;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  @apply flex items-center justify-between;
   font-size: 22px;
   font-weight: 900;
   color: #ffffff;
@@ -1682,18 +1512,15 @@
 
 .lne-home-center {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
+  @apply flex flex-col items-center justify-center gap-[18px];
+  padding:28px 0;
   max-width: 860px;
   margin: 0 auto;
-  width: 100%;
+  @apply w-full;
 }
 
 .lne-home-crest {
-  text-align: center;
+  @apply text-center;
 }
 
 .lne-home-crest-sub {
@@ -1723,11 +1550,7 @@
 }
 
 .lne-home-hero-stage {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 22px;
-  width: 100%;
+  @apply flex items-center justify-center gap-[22px] w-full;
 }
 
 .lne-home-side-hero {
@@ -1739,9 +1562,7 @@
 }
 
 .lne-home-main-hero-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+  @apply flex items-center gap-[16px];
   padding: 12px 18px;
   background: #3f4765;
   border: 3px solid #d4af37;
@@ -1760,13 +1581,11 @@
   box-shadow:
     inset 0 0 0 2px #383a3f,
     0 0 0 2px #000;
-  flex-shrink: 0;
+  @apply shrink-0;
 }
 
 .lne-home-main-hero-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  @apply flex flex-col gap-[4px];
 }
 
 .lne-home-main-hero-text strong {
@@ -1786,17 +1605,19 @@
 }
 
 .lne-home-buttons {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
+  @apply flex flex-col items-center gap-[12px];
 }
+.lne-home-crest>p {color:#e2d8be;line-height:1.9;font-size:14px;}
+.lne-home-save-summary {font-size:12px;color:#e8dab5;margin:0;text-align:center;line-height:1.8;}
+.lne-home-difficulty { @apply flex flex-wrap items-center justify-center gap-3; font-size:13px;color:#e6d1a2; }
+.lne-home-difficulty select {font:inherit;background:#171522;color:#f4e4bd;border:1px solid #b59c5e;padding:7px 14px;}
+.lne-home-difficulty-copy {max-width:470px;text-align:center;font-size:12px;line-height:1.8;color:#d8cdb2;margin:0;}
+.lne-home-screen button:focus-visible,.lne-home-screen select:focus-visible {outline:2px solid #fff0b5;outline-offset:5px;}
+.lne-home-notice {text-align:center;font-size:12px;color:#ffe5a8;}
+@media(max-width:650px){.lne-home-screen{padding:20px 16px;}.lne-home-top-bar{gap:10px;flex-wrap:wrap;}.lne-home-top-bar .lne-home-gold-box{min-width:120px;font-size:18px;}.lne-home-crest-title{font-size:42px;letter-spacing:4px;}.lne-home-side-hero{display:none;}.lne-home-main-hero-card{max-width:100%;padding:12px;}.lne-home-main-hero-img{width:64px;height:64px;}.lne-home-center{gap:20px;}.lne-home-buttons{width:100%;}.lne-home-btn-row{gap:10px;}}
 
 .lne-home-btn-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
+  @apply flex flex-wrap justify-center gap-[12px];
 }
 
 /* Slate-Blue Panel with Gold Double Border ( & 2 Core Frame) */
@@ -1809,14 +1630,11 @@
     inset 0 0 0 2px #262c40,
     0 18px 42px rgba(0, 0, 0, 0.9);
   padding: 14px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  @apply flex flex-col gap-[12px];
 }
 
 .lne-slate-panel-title {
-  margin: 0;
-  text-align: center;
+  @apply m-0 text-center;
   font-size: 24px;
   font-weight: 900;
   color: #ffffff;
@@ -1828,53 +1646,44 @@
 
 /* : Character Select Screen */
 .lne-charselect-backdrop {
-  position: absolute;
-  inset: 0;
+  @apply absolute inset-0;
   z-index: 70;
   background:
     radial-gradient(circle at 25% 40%, rgba(168, 22, 35, 0.65) 0%, rgba(35, 6, 12, 0.96) 100%);
-  display: flex;
-  flex-direction: column;
+  @apply flex flex-col;
   padding: 56px 24px 18px;
-  gap: 10px;
+  @apply gap-[10px];
 }
 
 .lne-charselect-top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 24px;
+  @apply flex items-center justify-center gap-[24px];
 }
 
 .lne-charselect-columns {
   flex: 1;
-  display: flex;
+  @apply flex;
   align-items: stretch;
-  justify-content: center;
-  gap: 18px;
+  @apply justify-center gap-[18px];
   max-width: 1180px;
   margin: 0 auto;
-  width: 100%;
-  min-height: 0;
+  @apply w-full min-h-0;
 }
 
 .lne-charselect-panel {
   flex: 1.35;
-  min-height: 0;
-  justify-content: space-between;
+  @apply min-h-0 justify-between;
 }
 
 .lne-authentic-char-grid {
-  display: grid;
+  @apply grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  overflow-y: auto;
+  @apply gap-[10px] overflow-y-auto;
   padding: 4px;
   flex: 1;
 }
 
 .lne-authentic-char-tile {
-  position: relative;
+  @apply relative;
   background: #929497;
   border: 3px solid #d4af37;
   box-shadow:
@@ -1882,10 +1691,7 @@
     inset 0 0 0 2px #525458;
   padding: 6px 8px;
   height: 114px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  cursor: pointer;
+  @apply flex flex-col justify-between cursor-pointer;
 }
 
 .lne-authentic-char-tile.lne-tile-locked {
@@ -1914,22 +1720,20 @@
 }
 
 .lne-tile-bottom {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  @apply flex items-end justify-between;
   height: 72px;
 }
 
 .lne-tile-char-sprite {
   width: 68px;
   height: 68px;
-  object-fit: contain;
+  @apply object-contain;
 }
 
 .lne-tile-weapon-icon {
   width: 34px;
   height: 34px;
-  object-fit: contain;
+  @apply object-contain;
   filter: drop-shadow(2px 2px 0 #000);
 }
 
@@ -1945,15 +1749,11 @@
     0 0 0 2px #1c1917,
     inset 0 0 0 2px #4b4d52;
   padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  @apply flex flex-col gap-[6px];
 }
 
 .lne-drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  @apply flex items-center justify-between;
 }
 
 .lne-drawer-header strong {
@@ -1971,27 +1771,21 @@
 }
 
 .lne-drawer-body {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  @apply flex items-center gap-[14px];
 }
 
 .lne-drawer-sprite-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
+  @apply flex flex-col items-center gap-[3px];
 }
 
 .lne-drawer-sprite {
   width: 64px;
   height: 64px;
-  object-fit: contain;
+  @apply object-contain;
 }
 
 .lne-drawer-skin-pips {
-  display: flex;
-  gap: 4px;
+  @apply flex gap-[4px];
 }
 
 .lne-skin-pip {
@@ -2013,10 +1807,7 @@
   box-shadow:
     0 0 0 2px #000,
     inset 0 0 8px rgba(234, 179, 8, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  @apply flex items-center justify-center shrink-0;
 }
 
 .lne-drawer-weapon-frame img {
@@ -2026,13 +1817,11 @@
 
 .lne-drawer-desc {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  @apply flex flex-col gap-[4px];
 }
 
 .lne-drawer-desc p {
-  margin: 0;
+  @apply m-0;
   font-size: 15px;
   font-weight: 800;
   color: #ffffff;
@@ -2042,15 +1831,13 @@
 }
 
 .lne-drawer-actions {
-  flex-shrink: 0;
+  @apply shrink-0;
 }
 
 /* Right Column in Character Select (Stage & Rules) */
 .lne-charselect-right-col {
   width: 350px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  @apply flex flex-col gap-[10px];
 }
 
 .lne-royal-header-banner {
@@ -2058,7 +1845,7 @@
   background: linear-gradient(180deg, #2b4fdd 0%, #1a3399 100%);
   border: 3px solid #d4af37;
   border-radius: 8px;
-  text-align: center;
+  @apply text-center;
   font-size: 18px;
   font-weight: 900;
   color: #ffffff;
@@ -2071,10 +1858,7 @@
   border: 3px solid #d4af37;
   box-shadow: 0 0 0 2px #1c1917;
   padding: 10px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  @apply overflow-y-auto flex flex-col gap-[6px];
 }
 
 .lne-stage-list-title {
@@ -2087,13 +1871,11 @@
 }
 
 .lne-stage-check-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  @apply flex items-center gap-[8px];
   padding: 6px 8px;
   background: rgba(20, 24, 36, 0.38);
   border: 2px solid transparent;
-  cursor: pointer;
+  @apply cursor-pointer;
 }
 
 .lne-stage-check-row.lne-stage-row-active {
@@ -2103,7 +1885,7 @@
 
 .lne-stage-check-row.lne-stage-row-locked {
   opacity: 0.6;
-  cursor: not-allowed;
+  @apply cursor-not-allowed;
 }
 
 .lne-gold-checkbox {
@@ -2111,19 +1893,15 @@
   height: 20px;
   background: #271722;
   border: 2px solid #d4af37;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @apply flex items-center justify-center;
   font-size: 14px;
   font-weight: 900;
   color: #fde047;
-  flex-shrink: 0;
+  @apply shrink-0;
 }
 
 .lne-stage-row-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  @apply flex flex-col gap-[2px];
 }
 
 .lne-stage-row-info strong {
@@ -2138,24 +1916,22 @@
 }
 
 .lne-rule-check-grid {
-  display: grid;
+  @apply grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  @apply gap-[6px];
 }
 
 .lne-rule-check-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  @apply flex items-center gap-[6px];
   font-size: 12px;
   font-weight: 800;
   color: #ffffff;
   text-shadow: 1px 1px 0 #000;
-  cursor: pointer;
+  @apply cursor-pointer;
 }
 
 .lne-confirm-run-btn {
-  width: 100%;
+  @apply w-full;
   padding: 12px;
   font-size: 18px;
 }
@@ -2165,34 +1941,25 @@
    ============================================================================ */
 
 .lne-pause-overlay {
-  position: absolute;
-  inset: 0;
+  @apply absolute inset-0;
   z-index: 60;
   background: rgba(8, 12, 18, 0.55);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  @apply flex flex-col justify-between;
   padding: 46px 20px 18px;
 }
 
 .lne-pause-main-row {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
+  @apply flex items-center justify-between gap-[18px];
   max-width: 1240px;
-  width: 100%;
+  @apply w-full;
   margin: 0 auto;
-  min-height: 0;
+  @apply min-h-0;
 }
 
 .lne-left-pause-column {
   width: 230px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex-shrink: 0;
+  @apply flex flex-col gap-[8px] shrink-0;
 }
 
 .lne-pause-equip-panel {
@@ -2200,22 +1967,17 @@
   border: 3px solid #d4af37;
   box-shadow: 0 0 0 2px #14171f;
   padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  @apply flex flex-col gap-[6px];
 }
 
 .lne-pause-equip-grid {
-  display: grid;
+  @apply grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 4px;
+  @apply gap-[4px];
 }
 
 .lne-pause-slot-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  @apply flex flex-col items-center gap-[2px];
 }
 
 .lne-pause-slot-icon-box {
@@ -2223,9 +1985,7 @@
   height: 30px;
   background: rgba(20, 23, 31, 0.38);
   border: 1px solid rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @apply flex items-center justify-center;
 }
 
 .lne-pause-slot-img {
@@ -2234,9 +1994,9 @@
 }
 
 .lne-slot-pips {
-  display: grid;
+  @apply grid;
   grid-template-columns: repeat(3, 5px);
-  gap: 1px;
+  @apply gap-[1px];
 }
 
 .lne-slot-pip {
@@ -2252,26 +2012,20 @@
 
 /* Updated 19-Row Stat Sheet (matches  left grey table) */
 .lne-stat-sheet {
-  width: 100%;
+  @apply w-full;
   background: #8e9094;
   border: 3px solid #d4af37;
   box-shadow: 0 0 0 2px #14171f;
   padding: 6px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  @apply flex flex-col gap-[8px];
 }
 
 .lne-stat-group {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  @apply flex flex-col gap-[1px];
 }
 
 .lne-stat-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  @apply flex items-center justify-between;
   font-size: 12px;
   font-weight: 800;
   padding: 1px 2px;
@@ -2279,9 +2033,7 @@
 }
 
 .lne-stat-row span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  @apply inline-flex items-center gap-[4px];
   color: #ffffff;
   text-shadow:
     1px 1px 0 #000,
@@ -2305,15 +2057,11 @@
   flex: 1;
   max-width: 780px;
   max-height: 74vh;
-  overflow-y: auto;
+  @apply overflow-y-auto;
 }
 
 .lne-grimoire-legend {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
+  @apply flex items-center justify-between flex-wrap gap-[8px];
   padding: 6px 10px;
   background: rgba(15, 23, 42, 0.55);
   border: 1px solid #d4af37;
@@ -2329,26 +2077,21 @@
 }
 
 .lne-grimoire-formula-grid {
-  display: grid;
+  @apply grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px 18px;
   padding: 4px;
 }
 
 .lne-formula-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  @apply flex items-center justify-between gap-[8px];
   padding: 4px 8px;
   background: rgba(24, 29, 46, 0.45);
   border: 1px solid rgba(212, 175, 55, 0.35);
 }
 
 .lne-formula-icons {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  @apply flex items-center gap-[4px];
 }
 
 .lne-formula-slot {
@@ -2356,9 +2099,7 @@
   height: 34px;
   background: rgba(15, 20, 32, 0.65);
   border: 2px solid #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @apply flex items-center justify-center;
 }
 
 .lne-formula-slot img {
@@ -2383,10 +2124,7 @@
 }
 
 .lne-formula-caption {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
+  @apply flex flex-col items-end text-right;
   font-size: 11px;
 }
 
@@ -2406,11 +2144,7 @@
   border: 3px solid #d4af37;
   box-shadow: 0 0 0 2px #14171f;
   padding: 10px 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  @apply flex flex-col items-center gap-[10px] shrink-0;
 }
 
 .lne-arcana-header-icon {
@@ -2422,10 +2156,7 @@
   height: 118px;
   background: #272930;
   border: 2px solid #52525b;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
+  @apply flex flex-col items-center justify-between;
   padding: 4px;
 }
 
@@ -2451,12 +2182,11 @@
 .lne-arcana-name {
   font-size: 10px;
   color: #ffffff;
-  text-align: center;
+  @apply text-center;
 }
 
 .lne-arcana-empty-back {
-  width: 100%;
-  height: 100%;
+  @apply w-full h-full;
   background: repeating-linear-gradient(
     45deg,
     #27272a 0px,
@@ -2468,33 +2198,26 @@
 }
 
 .lne-pause-bottom-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
+  @apply flex items-center justify-center gap-[20px];
   padding-top: 8px;
 }
 
 /* Visual 6+6 Build Slots inside Guide Modal */
 .lne-visual-build-slots {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  @apply flex flex-col gap-[8px];
   background: rgba(15, 20, 32, 0.55);
   padding: 8px 10px;
   border: 1px solid rgba(212, 175, 55, 0.4);
 }
 
 .lne-visual-slot-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  @apply flex items-center gap-[10px];
 }
 
 .lne-visual-icon-row {
-  display: grid;
+  @apply grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
+  @apply gap-[8px];
   flex: 1;
 }
 
@@ -2503,12 +2226,7 @@
   border: 2px solid #d4af37;
   border-radius: 4px;
   padding: 6px 4px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  text-align: center;
+  @apply flex flex-col items-center justify-center gap-[4px] text-center;
   min-height: 58px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
   transition: transform 120ms ease;
@@ -2525,9 +2243,7 @@
 }
 
 .lne-visual-pair {
-  display: flex;
-  align-items: center;
-  gap: 2px;
+  @apply flex items-center gap-[2px];
 }
 
 .lne-visual-pair img,
@@ -2548,12 +2264,10 @@
   font-size: 11px;
   font-weight: 700;
   color: #f8fafc;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  @apply whitespace-nowrap overflow-hidden text-ellipsis;
   max-width: 100%;
   line-height: 1;
-  margin: 0;
+  @apply m-0;
 }
 
 .lne-build-combo-strip {

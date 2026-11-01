@@ -2,6 +2,7 @@
 
 - 涉及游戏研究、开发、验收或发布时，先读取 [.agents/skills/scalia-game-workflow/SKILL.md](.agents/skills/scalia-game-workflow/SKILL.md)，按本次任务范围工作。仅规划或仅文档请求不实现玩法、不登记上线。
 - 使用 pnpm 和已有 `pnpm-lock.yaml`，不要混用多个包管理器锁文件。
+- 界面样式使用仓库级 Tailwind CSS 4；游戏入口导入 `shared/styles/tailwind.css` 并显式扫描本游戏源码。通用布局优先 utility，复杂游戏视觉保留 CSS；具体迁移与验证规范见项目 skill。
 - 各游戏完整放在 `games/<slug>/`，拥有自己的 HTML、代码、资源和元数据。不同游戏不要互相导入业务代码。
 - `shared/` 只接收确实共用的功能，不反向依赖具体游戏。避免预先搭建通用游戏引擎、抽象插件系统或后端。
 - 每款游戏可以选择 React、Canvas 或两者结合。渲染引擎由该游戏导入，开发目录页只读取元数据。

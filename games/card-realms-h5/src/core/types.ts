@@ -204,6 +204,7 @@ export type BoardState = {
 };
 
 export type PauseReason =
+  | 'home'
   | 'manual'
   | 'menu'
   | 'drag'
@@ -225,6 +226,7 @@ export type RunStats = {
 };
 
 export type RunState = {
+  difficulty?: import('./difficulty.ts').Difficulty;
   schemaVersion: number;
   contentVersion: string;
   baselineId: string;

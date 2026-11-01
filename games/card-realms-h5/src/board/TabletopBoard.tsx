@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent } from 'react';
 import { CARD_MAP, RECIPES } from '../content/ledger.ts';
 import type { SoundController } from '../audio/sound.ts';
 import { getEffectiveVillagerStats, type CardRealmsEngine } from '../core/engine.ts';
@@ -27,6 +27,9 @@ const CATEGORY_META: Record<CardCategory, { label: string; color: string; bg: st
 };
 
 type DragState = {
+  moved: boolean;
+  originX: number;
+  originY: number;
   pointerId: number;
   sourceStackId: string;
   startCardIndex: number;
@@ -48,6 +51,7 @@ type PanState = {
 };
 
 type Props = {
+  revealedCardIds: Set<string>;
   engine: CardRealmsEngine;
   run: RunState;
   sound: SoundController;
@@ -61,6 +65,7 @@ export function TabletopBoard({
   sound,
   selectedInstanceId,
   onSelectInstance,
+  revealedCardIds,
 }: Props) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const sellZoneRef = useRef<HTMLDivElement | null>(null);
@@ -68,6 +73,18 @@ export function TabletopBoard({
   const [camera, setCamera] = useState({ x: 30, y: 20, scale: 1 });
   const [drag, setDrag] = useState<DragState | null>(null);
   const [pan, setPan] = useState<PanState | null>(null);
+  const lastPress = useRef<{ id: string; time: number } | null>(null);
+
+  useEffect(() => {
+    const cancel = () => {
+      setDrag(null);
+      setPan(null);
+      lastPress.current = null;
+      engine.dispatch({ type: 'SET_PAUSE_REASON', reason: 'drag', active: false });
+    };
+    window.addEventListener('blur', cancel);
+    return () => window.removeEventListener('blur', cancel);
+  }, [engine]);
 
   const board = run.boards[run.activeRegion];
   const jobsByStackId = new Map<string, Job>();
@@ -195,11 +212,15 @@ export function TabletopBoard({
     cardIndex: number,
     instance: CardInstance,
   ) {
+    if (e.button === 1) return; // Let middle-button panning bubble to the viewport.
     e.stopPropagation();
     onSelectInstance(instance.instanceId);
     if (e.button !== 0 || stack.lockedByEncounterId || run.monthEndPhase === 'feed') return;
 
-    const effectiveIndex = e.shiftKey ? 0 : cardIndex;
+    const now = performance.now();
+    const doublePress = lastPress.current?.id === instance.instanceId && now - lastPress.current.time < 350;
+    lastPress.current = { id: instance.instanceId, time: now };
+    const effectiveIndex = e.shiftKey || doublePress ? 0 : cardIndex;
     const movingIds = stack.cardIds.slice(effectiveIndex);
     if (movingIds.length === 0) return;
 
@@ -213,6 +234,9 @@ export function TabletopBoard({
 
     viewportRef.current?.setPointerCapture(e.pointerId);
     setDrag({
+      moved: false,
+      originX: stack.x,
+      originY: cardWorldY,
       pointerId: e.pointerId,
       sourceStackId: stack.stackId,
       startCardIndex: effectiveIndex,
@@ -226,7 +250,8 @@ export function TabletopBoard({
   }
 
   function handleBoardPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
-    if (e.button !== 0 || drag) return;
+    if ((e.button !== 0 && e.button !== 1) || drag) return;
+    e.preventDefault();
     viewportRef.current?.setPointerCapture(e.pointerId);
     setPan({
       pointerId: e.pointerId,
@@ -242,10 +267,13 @@ export function TabletopBoard({
       const worldPt = clientToWorld(e.clientX, e.clientY);
       const nextX = worldPt.x - drag.offsetX;
       const nextY = worldPt.y - drag.offsetY;
+      const moved = drag.moved || Math.hypot(nextX - drag.originX, nextY - drag.originY) > 3;
+      if (moved) lastPress.current = null;
       const overSell = isClientOverSellZone(e.clientX, e.clientY);
       const snapTarget = overSell ? undefined : findSnapTargetStack(nextX, nextY, drag.sourceStackId);
       setDrag({
         ...drag,
+        moved,
         worldX: nextX,
         worldY: nextY,
         overSellZone: overSell,
@@ -267,6 +295,10 @@ export function TabletopBoard({
     if (drag && drag.pointerId === pointerId) {
       if (engine.getSnapshot().profile.settings.pauseOnDrag) {
         engine.dispatch({ type: 'SET_PAUSE_REASON', reason: 'drag', active: false });
+      }
+      if (!drag.moved) {
+        setDrag(null);
+        return;
       }
       if (drag.overSellZone) {
         const sold = engine.dispatch({
@@ -312,7 +344,13 @@ export function TabletopBoard({
       onPointerDown={handleBoardPointerDown}
       onPointerMove={handleBoardPointerMove}
       onPointerUp={(e) => finishDragOrPan(e.pointerId)}
-      onPointerCancel={(e) => finishDragOrPan(e.pointerId)}
+      onPointerCancel={() => {
+        setDrag(null);
+        setPan(null);
+        lastPress.current = null;
+        engine.dispatch({ type: 'SET_PAUSE_REASON', reason: 'drag', active: false });
+      }}
+      onAuxClick={(e) => { if (e.button === 1) e.preventDefault(); }}
       onWheel={handleWheel}
     >
       {/* Top action strip: Sell box + camera controls */}
@@ -438,7 +476,7 @@ export function TabletopBoard({
                     tabIndex={0}
                     role="button"
                     aria-label={`${def.nameZh}，类别 ${meta.label}，售价 ${def.value > 0 ? def.value : '不可售'}`}
-                    className={`paper-card ${isSelected ? 'paper-card-selected' : ''}`}
+                    className={`paper-card ${isSelected ? 'paper-card-selected' : ''} ${revealedCardIds.has(cid) ? 'paper-card-revealed' : ''}`}
                     style={{
                       top: idx * CARD_HEADER_OFFSET,
                       backgroundColor: meta.bg,

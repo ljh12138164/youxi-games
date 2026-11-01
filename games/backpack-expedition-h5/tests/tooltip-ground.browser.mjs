@@ -1,0 +1,73 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {mkdir} from 'node:fs/promises';
+import {chromium} from 'playwright';
+import {createServer} from 'vite';
+
+test('详情只在点击时显示、边缘定位、地上区域拖入取回与离开确认',async()=>{
+  const server=process.env.GAME_TEST_BASE_URL?null:await createServer({server:{host:'127.0.0.1',port:0,open:false}});await server?.listen();
+  const browser=await chromium.launch();
+  try{
+    const page=await browser.newPage({viewport:{width:1280,height:900}}),errors=[];
+    await mkdir('reports/backpack-expedition-h5',{recursive:true});
+    page.on('pageerror',e=>errors.push(e.message));
+    const url=`${process.env.GAME_TEST_BASE_URL??server.resolvedUrls.local[0]}games/backpack-expedition-h5/`;
+    await page.goto(url);
+    await page.evaluate(async()=>{const {newRun}=await import('/games/backpack-expedition-h5/src/engine.ts');localStorage.setItem('youxi:backpack-expedition-h5:v1',JSON.stringify(newRun(42)));});
+    await page.reload();await page.getByRole('button',{name:'继续远征',exact:true}).click();
+    const read=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('youxi:backpack-expedition-h5:v1')));
+    const shield=page.getByRole('button',{name:'橡木盾，背包内，1 能量',exact:true});
+    await shield.hover();await shield.focus();
+    assert.equal(await page.locator('.item-tooltip').count(),0,'悬停或聚焦不显示详情');
+    await shield.click();const tip=page.getByRole('dialog',{name:'橡木盾详情',exact:true});await tip.waitFor();
+    assert.ok((await tip.innerText()).includes('获得 7 点护盾'));
+    assert.equal(await page.locator('.journey-panel .item-inspector').count(),0);
+    const sourceBox=await shield.boundingBox(),tipBox=await tip.boundingBox();
+    assert.ok(tipBox.x>=sourceBox.x+sourceBox.width-1,'宽屏详情应出现在物品旁边');
+    await page.mouse.move(10,10);assert.equal(await tip.isVisible(),true,'移开鼠标不关闭点击详情');
+    await page.mouse.click(10,10);await tip.waitFor({state:'hidden'});
+    await shield.click();const popover=page.getByRole('dialog',{name:'橡木盾详情',exact:true});await popover.waitFor();
+    await popover.getByRole('button',{name:'关闭物品详情'}).click();
+    const ground=page.getByRole('region',{name:'地上物品',exact:true});
+    const area=await ground.boundingBox();assert.ok(area.height>=200,'地上区域应有实际可投放空间');
+    await page.mouse.move(sourceBox.x+15,sourceBox.y+15);await page.mouse.down();
+    await page.mouse.move(area.x+area.width/2,area.y+area.height-25,{steps:6});
+    assert.ok((await ground.getAttribute('class')).includes('ground-hover'));
+    assert.equal(await page.locator('.item-tooltip').count(),0,'拖动时应隐藏详情');
+    await page.mouse.up();
+    assert.ok((await read()).loot.some(i=>i.def==='shield'));
+    const onGround=ground.getByRole('button',{name:'橡木盾，待整理，1 能量',exact:true});await onGround.waitFor();
+    await page.screenshot({path:'reports/backpack-expedition-h5/ground-filled-desktop.png',fullPage:true});
+    const itemBox=await onGround.boundingBox(),cell=await page.getByRole('button',{name:'格子 2,1',exact:true}).boundingBox();
+    await page.mouse.move(itemBox.x+10,itemBox.y+10);await page.mouse.down();await page.mouse.move(cell.x+5,cell.y+5,{steps:6});await page.mouse.up();
+    assert.ok((await read()).items.some(i=>i.def==='shield'));assert.equal((await read()).loot.length,0);
+    await shield.click();await page.getByRole('button',{name:'放到地上，腾出位置',exact:true}).click();
+    assert.ok((await read()).loot.some(i=>i.def==='shield'));
+    await page.getByRole('button',{name:'放弃地上物品，继续选路',exact:true}).click();
+    await page.getByRole('button',{name:'再整理一下',exact:true}).click();assert.equal((await read()).loot.length,1);
+    await page.getByRole('button',{name:'放弃地上物品，继续选路',exact:true}).click();
+    await page.getByRole('dialog').getByRole('button',{name:'放弃地上物品，继续选路',exact:true}).click();
+    assert.equal((await read()).loot.length,0);assert.equal((await read()).step,0);
+    await page.getByRole('button',{name:'嫩枝杖，背包内，1 能量',exact:true}).click();await page.getByRole('dialog',{name:'嫩枝杖详情',exact:true}).waitFor();
+    await mkdir('reports/backpack-expedition-h5',{recursive:true});await page.screenshot({path:'reports/backpack-expedition-h5/tooltip-ground-desktop.png',fullPage:true});
+    await page.setViewportSize({width:390,height:844});
+    const flower=page.getByRole('button',{name:'雏菊护符，背包内，0 能量',exact:true});await flower.click();
+    const mobile=await page.locator('.item-tooltip').boundingBox();assert.ok(mobile.x>=0&&mobile.y>=0&&mobile.x+mobile.width<=390&&mobile.y+mobile.height<=844);
+    await page.screenshot({path:'reports/backpack-expedition-h5/tooltip-ground-mobile.png',fullPage:true});
+    // A rest action also leaves this area: confirm before dropping its items.
+    await page.evaluate(()=>{
+      const key='youxi:backpack-expedition-h5:v1',run=JSON.parse(localStorage.getItem(key));
+      run.phase='rest';run.node='rest';run.step=3;run.hp=10;
+      run.loot=[{uid:run.seq++,def:'shield',x:-1,y:-1,rotation:0,used:0}];
+      localStorage.setItem(key,JSON.stringify(run));
+    });
+    await page.reload();await page.getByRole('button',{name:'继续远征',exact:true}).click();
+    await page.getByRole('button',{name:'好好休息 · 恢复 12 点生命',exact:true}).click();
+    await page.getByRole('button',{name:'再整理一下',exact:true}).click();
+    assert.equal((await read()).hp,10);assert.equal((await read()).loot.length,1);
+    await page.getByRole('button',{name:'好好休息 · 恢复 12 点生命',exact:true}).click();
+    await page.getByRole('button',{name:'放弃剩余物品，继续前进',exact:true}).click();
+    assert.equal((await read()).hp,22);assert.equal((await read()).step,4);assert.equal((await read()).loot.length,0);
+    assert.deepEqual(errors,[]);
+  }finally{await browser.close();await server?.close();}
+});

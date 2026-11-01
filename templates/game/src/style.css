@@ -1,5 +1,6 @@
+@import '@shared/styles/tailwind.css';
+@source './';
+
 .game-placeholder {
-  max-width: 48rem;
-  margin: 0 auto;
-  padding: 4rem 1.5rem;
+  @apply max-w-[48rem] mx-auto py-[4rem] px-[1.5rem];
 }

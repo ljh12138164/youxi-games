@@ -24,10 +24,12 @@ import type {
   WeightedDrop,
 } from './types.ts';
 
+import { DIFFICULTIES, difficultyOf, type Difficulty } from './difficulty.ts';
+
 export const SCHEMA_VERSION = 1;
 export const TICKS_PER_SECOND = 20;
 export const TICK_MS = 50;
-export const BASE_BOARD_CAPACITY = 20;
+export const BASE_BOARD_CAPACITY = 25;
 
 export function monthTicksForOption(option: MonthLengthOption): number {
   if (option === 'short') return 90 * TICKS_PER_SECOND; // 90s
@@ -64,7 +66,7 @@ export function createInitialProfile(): ProfileState {
       musicVolume: 0.5,
       sfxVolume: 0.7,
       userMuted: false,
-      pauseOnDrag: false,
+      pauseOnDrag: true,
       gridSnap: true,
       reducedMotion: false,
       pauseKey: 'Space',
@@ -208,10 +210,12 @@ export function createInitialRun(
     seed?: number;
     monthLengthOption?: MonthLengthOption;
     peacefulMode?: boolean;
+    difficulty?: Difficulty;
   } = {},
   profile: ProfileState = createInitialProfile(),
 ): RunState {
-  const monthLengthOption = options.monthLengthOption ?? 'normal';
+  const difficulty = options.difficulty ?? 'normal';
+  const monthLengthOption = options.monthLengthOption ?? DIFFICULTIES[difficulty].monthLength;
   const run: RunState = {
     schemaVersion: SCHEMA_VERSION,
     contentVersion: CONTENT_VERSION,
@@ -226,6 +230,7 @@ export function createInitialRun(
     speed: 1,
     manualPaused: false,
     peacefulMode: options.peacefulMode ?? false,
+    difficulty,
     monthLengthOption,
     activeRegion: 'mainland',
     unlockedRegions: ['mainland'],
@@ -263,6 +268,9 @@ export function createInitialRun(
   spawnCardInstance(run, profile, 'gold', 'mainland', 180, 400, true);
   spawnCardInstance(run, profile, 'gold', 'mainland', 180, 400, true);
   spawnCardInstance(run, profile, 'blueprint_carving', 'mainland', 340, 400, false);
+  for (let i = 0; i < DIFFICULTIES[difficulty].berries; i++) {
+    spawnCardInstance(run, profile, 'berry', 'mainland', 500, 400, true);
+  }
 
   return run;
 }
@@ -1159,7 +1167,17 @@ function enterMonthEndFeedPhase(run: RunState, profile: ProfileState): void {
     }
 
     if (need > 0) {
-      run.monthEndLog.push(`${def.nameZh} 因缺少 ${need} 点食物而饿死！`);
+      const settings = difficultyOf(run);
+      const protectedMonth = run.month <= settings.graceMonths;
+      const hungerDamage = Math.ceil(mouth.maxHp * settings.hungerDamage);
+      const beforeHungerHp = mouth.hp;
+      mouth.hp = Math.max(protectedMonth ? 1 : 0, mouth.hp - hungerDamage);
+      if (mouth.hp > 0) {
+        const actualDamage = Math.max(0, beforeHungerHp - mouth.hp);
+        run.monthEndLog.push(`${def.nameZh} 缺少 ${need} 点食物，失去 ${actualDamage} 点生命。${protectedMonth ? '本月仍有缺粮保护，至少保留 1 点生命。' : ''}下个月及时补上食物就能恢复。`);
+        continue;
+      }
+      run.monthEndLog.push(`${def.nameZh} 连续缺粮且生命耗尽，没能撑过去。`);
       const stack = Object.values(board.stacks).find((s) => s.cardIds.includes(mouth.instanceId));
       const sx = stack?.x ?? 260;
       const sy = stack?.y ?? 260;
@@ -1276,7 +1294,8 @@ function advanceMonthSettlementPhase(run: RunState, profile: ProfileState): void
 
     run.monthEndPhase = 'events';
     run.monthEndLog = [];
-    if (!run.peacefulMode && run.month >= 3 && run.month % 2 === 1) {
+    const settings = difficultyOf(run);
+    if (!run.peacefulMode && run.month >= settings.firstRaid && (run.month - settings.firstRaid) % settings.raidInterval === 0) {
       if (region === 'island') {
         spawnCardInstance(run, profile, 'pirate', 'island', 620, 260, false);
         run.monthEndLog.push('月末事件：海盗袭击了海岛海岸！');
@@ -1285,6 +1304,8 @@ function advanceMonthSettlementPhase(run: RunState, profile: ProfileState): void
         spawnCardInstance(run, profile, 'goblin', 'mainland', 660, 300, false);
         run.monthEndLog.push('月末事件：奇异传送门开启，哥布林来袭！');
       }
+    } else if (!run.peacefulMode && run.month === settings.firstRaid - 1) {
+      run.monthEndLog.push('远处出现了敌人的踪迹。下个月可能遭到袭击，趁现在准备武器和食物。');
     } else if (run.month % 3 === 0) {
       spawnCardInstance(run, profile, 'travelling_cart', region, 580, 360, false);
       run.monthEndLog.push('月末事件：行商马车到访。');

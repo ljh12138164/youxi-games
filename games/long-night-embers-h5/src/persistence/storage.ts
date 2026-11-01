@@ -33,6 +33,9 @@ export type ExportBundle = {
 };
 
 const memoryFallback = new Map<string, unknown>();
+const observedSlots = new Map<string, string | null>();
+let saveQueue: Promise<unknown> = Promise.resolve();
+const CONFLICT_MESSAGE = '存档已被另一窗口更新，请重新读取档案后再保存；当前进度可先导出备份。';
 let idbAvailable = true;
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -72,23 +75,43 @@ async function kvGet<T>(key: string): Promise<T | undefined> {
   }
 }
 
-async function kvSetBatch(entries: Array<[string, unknown]>): Promise<boolean> {
-  for (const [k, v] of entries) {
-    memoryFallback.set(k, structuredClone(v));
-  }
+async function kvSetBatch(
+  entries: Array<[string, unknown]>,
+  guard?: { key: string; expected: string | null },
+): Promise<boolean> {
   try {
     const db = await openDatabase();
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
-      for (const [k, v] of entries) {
-        store.put(v, k);
-      }
+      let conflict = false;
+      const put = () => {
+        for (const [k, v] of entries) store.put(v, k);
+      };
+      if (guard) {
+        const req = store.get(guard.key);
+        req.onsuccess = () => {
+          if ((req.result?.revision ?? req.result?.updatedAt ?? null) !== guard.expected) {
+            conflict = true;
+            tx.abort();
+          } else put();
+        };
+      } else put();
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(conflict ? new Error(CONFLICT_MESSAGE) : tx.error);
     });
+    for (const [k, v] of entries) memoryFallback.set(k, structuredClone(v));
     return true;
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === CONFLICT_MESSAGE) throw error;
+    if (guard) {
+      const cached = memoryFallback.get(guard.key) as StoredSlotRecord | undefined;
+      if ((cached?.revision ?? cached?.updatedAt ?? null) !== guard.expected) {
+        throw new Error(CONFLICT_MESSAGE);
+      }
+    }
+    for (const [k, v] of entries) memoryFallback.set(k, structuredClone(v));
     return false;
   }
 }
@@ -121,6 +144,7 @@ export function validateRunStatePayload(candidate: unknown): {
     return { valid: false, error: '存档格式无效：缺少根对象' };
   }
   const r = candidate as Partial<RunState>;
+  if (r.difficulty !== undefined && !['easy', 'normal', 'hard'].includes(r.difficulty)) return {valid:false,error:'存档难度无效'};
   if (typeof r.schemaVersion !== 'number') {
     return { valid: false, error: '存档缺少 schemaVersion' };
   }
@@ -147,12 +171,24 @@ export function validateRunStatePayload(candidate: unknown): {
 }
 
 type StoredSlotRecord = {
+  revision?: string;
   updatedAt: string;
   run: RunState;
   profile: ProfileState;
 };
 
 export async function saveSlotBundle(
+  slotId: 1 | 2 | 3,
+  run: RunState,
+  profile: ProfileState,
+): Promise<{ ok: boolean; warning?: string }> {
+  const snapshot = structuredClone({ run, profile });
+  const task = saveQueue.then(() => saveSlotBundleNow(slotId, snapshot.run, snapshot.profile));
+  saveQueue = task.catch(() => {});
+  return task;
+}
+
+async function saveSlotBundleNow(
   slotId: 1 | 2 | 3,
   run: RunState,
   profile: ProfileState,
@@ -168,10 +204,14 @@ export async function saveSlotBundle(
   nextProfile.slotId = slotId;
 
   const now = new Date().toISOString();
+  const revision = crypto.randomUUID();
   const primaryKey = `${STORAGE_NAMESPACE}:slot:${slotId}`;
   const backupsKey = `${STORAGE_NAMESPACE}:backups:${slotId}`;
 
   const existingPrimary = await kvGet<StoredSlotRecord>(primaryKey);
+  if (!observedSlots.has(primaryKey)) {
+    observedSlots.set(primaryKey, existingPrimary?.revision ?? existingPrimary?.updatedAt ?? null);
+  }
   const existingBackups = (await kvGet<StoredSlotRecord[]>(backupsKey)) ?? [];
 
   const nextBackups = existingPrimary
@@ -179,11 +219,17 @@ export async function saveSlotBundle(
     : existingBackups.slice(0, 3);
 
   const batch: Array<[string, unknown]> = [
-    [primaryKey, { updatedAt: now, run: check.run, profile: nextProfile }],
+    [primaryKey, { revision, updatedAt: now, run: check.run, profile: nextProfile }],
     [backupsKey, nextBackups],
   ];
 
-  const persisted = await kvSetBatch(batch);
+  let persisted: boolean;
+  try {
+    persisted = await kvSetBatch(batch, { key: primaryKey, expected: observedSlots.get(primaryKey)! });
+  } catch (error) {
+    return { ok: false, warning: error instanceof Error ? error.message : '存档写入失败' };
+  }
+  observedSlots.set(primaryKey, revision);
   if (!persisted) {
     return {
       ok: true,
@@ -205,6 +251,7 @@ export async function loadSlotBundle(
   const backupsKey = `${STORAGE_NAMESPACE}:backups:${slotId}`;
 
   const primary = await kvGet<StoredSlotRecord>(primaryKey);
+  observedSlots.set(primaryKey, primary?.revision ?? primary?.updatedAt ?? null);
   if (primary?.run) {
     const check = validateRunStatePayload(primary.run);
     if (check.valid && check.run) {
@@ -257,7 +304,8 @@ export async function restoreSlotBackup(
   if (!check.valid || !check.run) {
     return { run: null, profile: null, error: check.error ?? '备份校验未通过' };
   }
-  await kvSetBatch([[`${STORAGE_NAMESPACE}:slot:${slotId}`, target]]);
+  const result = await saveSlotBundle(slotId, check.run, target.profile);
+  if (!result.ok) return { run: null, profile: null, error: result.warning };
   return { run: check.run, profile: target.profile };
 }
 
@@ -345,7 +393,8 @@ export async function importJsonToSlot(
   };
 
   runCheck.run.slotId = slotId;
-  await saveSlotBundle(slotId, runCheck.run, nextProfile);
+  const result = await saveSlotBundle(slotId, runCheck.run, nextProfile);
+  if (!result.ok) return { ok: false, error: result.warning };
   return { ok: true, run: runCheck.run, profile: nextProfile };
 }
 

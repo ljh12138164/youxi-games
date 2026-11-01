@@ -136,7 +136,7 @@ test('4. 月末结算：喂食、婴儿成长、海岛腐败与容量超限处�
   engine.dispatch({ type: 'ADVANCE_MONTH_PHASE' });
   assert.equal(run.monthEndPhase, null);
   assert.equal(run.month, 2);
-  assert.equal(getBoardCapacity(run, 'mainland').max, 20);
+  assert.equal(getBoardCapacity(run, 'mainland').max, 25);
 });
 
 test('5. 装备穿戴、职业转换与战斗击败结算', () => {

@@ -115,6 +115,17 @@ pnpm run build:game -- card-realms-h5
 
 ## 后续接入游隙
 
+### 界面样式约定
+
+仓库通过 `@tailwindcss/vite` 统一接入 Tailwind CSS 4，开发、整站与独立游戏构建使用同一插件。新游戏模板已包含以下配置：
+
+```css
+@import '@shared/styles/tailwind.css';
+@source './';
+```
+
+各游戏独立扫描自己的源码，不启用 Preflight，以保留现有 reset 和游戏视觉。布局优先静态 utility 类，重复组件可用 `@apply`；像素边框、动画、复杂背景继续保留 CSS，运行时坐标和进度使用 inline style 或 CSS 变量。不要动态拼接 utility 类名，不使用 Tailwind CDN。详见项目游戏 skill 的界面样式规范。
+
 仓库已有 `shared/platform/` 适配器和卡牌领地接入代码。每款新游戏仍需将适配器连接到自己的运行状态与音频，并执行产物自测和平台验收：
 
 - 固定可信来源 `https://scalia.ltd`，加载和玩法真正就绪后才发送 `ready()`。
