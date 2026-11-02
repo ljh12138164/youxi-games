@@ -39,7 +39,7 @@ test('详情只在点击时显示、边缘定位、地上区域拖入取回与�
     const onGround=ground.getByRole('button',{name:'橡木盾，待整理，1 能量',exact:true});await onGround.waitFor();
     await page.screenshot({path:'reports/backpack-expedition-h5/ground-filled-desktop.png',fullPage:true});
     const itemBox=await onGround.boundingBox(),cell=await page.getByRole('button',{name:'格子 2,1',exact:true}).boundingBox();
-    await page.mouse.move(itemBox.x+10,itemBox.y+10);await page.mouse.down();await page.mouse.move(cell.x+5,cell.y+5,{steps:6});await page.mouse.up();
+    await page.mouse.move(itemBox.x+10,itemBox.y+10);await page.mouse.down();await page.mouse.move(cell.x+cell.width,cell.y+cell.height,{steps:6});await page.mouse.up();
     assert.ok((await read()).items.some(i=>i.def==='shield'));assert.equal((await read()).loot.length,0);
     await shield.click();await page.getByRole('button',{name:'放到地上，腾出位置',exact:true}).click();
     assert.ok((await read()).loot.some(i=>i.def==='shield'));

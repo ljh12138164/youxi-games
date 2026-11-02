@@ -63,12 +63,19 @@ export const ENEMIES: EnemyDef[] = [
   {id:'boss3',name:'遗迹老树',icon:3,hp:120,attack:14,pattern:['guard','attack','poison','attack']},
 ];
 export const ENEMY_MAP = Object.fromEntries(ENEMIES.map(e => [e.id,e]));
-export const EVENTS = [
+type EventDef={name:string;text:string;action:string;kind:'heal'|'gold'|'maxHp'|'trade'|'item';value:number;costGold?:number;costHp?:number;item?:string};
+export const EVENTS:EventDef[] = [
   {name:'石缝里的泉水',text:'石缝间有一股清泉。你可以喝一点，也可以绕过这里。',action:'喝一口 · 恢复 8 点生命',kind:'heal',value:8},
   {name:'遗落的钱袋',text:'旧路标下压着一个钱袋，袋口已经松了。',action:'收起钱袋 · 金币 +12',kind:'gold',value:12},
   {name:'守林人的午餐',text:'树桩上留着一份干粮，旁边的纸条写着：留给赶路的人。',action:'吃点东西 · 生命上限 +3',kind:'maxHp',value:3},
   {name:'苔石药摊',text:'一位药师愿意替你包扎，收取 8 枚金币。',action:'请他包扎 · 8 金币，恢复 16 点生命',kind:'trade',value:16},
   {name:'许愿树',text:'枝头挂着许多旧布条。你在树下歇了一会儿。',action:'歇一会儿 · 恢复 6 点生命',kind:'heal',value:6},
   {name:'旧营地',text:'熄灭的篝火旁还留着几枚铜币，帐篷早已空了。',action:'拾起铜币 · 金币 +9',kind:'gold',value:9},
-] as const;
+  {name:'挂在枝头的药包',text:'一个药包挂在低枝上，里面的草药还很新鲜。拿下来后，记得收进行囊。',action:'取下药包 · 获得晨露药剂',kind:'item',value:0,item:'dewpotion'},
+  {name:'赶路人的烤炉',text:'面包师正收拾烤炉。花 6 枚金币，可以带走一份刚烤好的榛果面包。',action:'买一份 · 6 金币，获得榛果面包',kind:'item',value:0,costGold:6,item:'nutbread'},
+  {name:'刺藤后的零钱',text:'几枚金币落在刺藤深处。伸手去取会划伤皮肤，损失 3 点生命；也可以留给下一位旅人。',action:'伸手取回 · 生命 -3，金币 +18',kind:'gold',value:18,costHp:3},
+  {name:'守林人的练习场',text:'守林人愿意教你调整呼吸。练习需要 10 枚金币，完成后生命上限增加 5 点，同时恢复 5 点生命。',action:'留下练习 · 10 金币，生命上限 +5',kind:'maxHp',value:5,costGold:10},
+  {name:'一双补好的靴子',text:'石凳上摆着一双苔纹靴，针脚细密。旁边的木牌写着：穿得上的人，请带走。',action:'收下靴子 · 获得苔纹靴',kind:'item',value:0,item:'mossboots'},
+  {name:'暖石小憩',text:'阳光把石头晒得暖暖的。坐下来喝口水，肩上的酸痛也缓和了一些。',action:'卸下行囊休息 · 恢复 12 点生命',kind:'heal',value:12},
+];
 export const FLOOR_NAMES = ['苔光小径','荆棘回廊','古树遗庭'];

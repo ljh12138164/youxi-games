@@ -4,7 +4,7 @@ import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
 import { createServer } from 'vite';
 
-test('拿住长物品末端旋转后仍落在鼠标对应格；旧装备可以直接丢弃腾位',async()=>{
+test('拖动物品中心跟随鼠标，右键旋转保持中心；键盘旋转和丢弃仍可用',async()=>{
   const server=await createServer({server:{host:'127.0.0.1',port:0,open:false}});await server.listen();
   const browser=await chromium.launch();
   try{
@@ -29,8 +29,20 @@ test('拿住长物品末端旋转后仍落在鼠标对应格；旧装备可以�
     await page.mouse.up();assert.deepEqual((await read()).items,beforeOutside);
     await page.mouse.move(bag.x+cell/2,bag.y+cell*2.5);await page.mouse.down();
     await page.mouse.move(bag.x+cell/2+8,bag.y+cell*2.5,{steps:3});
-    await page.keyboard.press('r');
-    await page.mouse.move(bag.x+cell/2,bag.y+cell*3.5,{steps:6});await page.mouse.up();
+    const assertCentered=async(x,y)=>{const ghost=await page.locator('.drag-ghost').boundingBox();assert.ok(Math.abs(ghost.x+ghost.width/2-x)<1);assert.ok(Math.abs(ghost.y+ghost.height/2-y)<1);};
+    await assertCentered(bag.x+cell/2+8,bag.y+cell*2.5);
+    const beforeRotate=(await read()).items;
+    await page.mouse.down({button:'right'});await page.mouse.up({button:'right'});
+    assert.equal(await page.locator('.drag-ghost').count(),1,'松开右键不能结束左键拖动');
+    assert.ok((await page.locator('.drag-ghost .forest-art').getAttribute('style')).includes('rotate(90deg)'),'右键应旋转一次');
+    await assertCentered(bag.x+cell/2+8,bag.y+cell*2.5);
+    assert.deepEqual((await read()).items,beforeRotate,'右键只旋转预览，松开左键才提交');
+    await page.mouse.move(bag.x+cell*1.5,bag.y+cell*3.5,{steps:6});
+    await assertCentered(bag.x+cell*1.5,bag.y+cell*3.5);
+    assert.equal(await page.locator('.bag-cell.valid').count(),3,'预览与中心锚点的落位一致');
+    await mkdir('reports/backpack-expedition-h5',{recursive:true});
+    await page.screenshot({path:'reports/backpack-expedition-h5/drag-centered.png'});
+    await page.mouse.up();
     const moved=(await read()).items.find(i=>i.def==='staff');
     assert.deepEqual([moved.x,moved.y,moved.rotation],[0,3,1]);
     assert.equal(await page.locator('.drag-ghost').count(),0);

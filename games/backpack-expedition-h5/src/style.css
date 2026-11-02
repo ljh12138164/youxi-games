@@ -88,6 +88,9 @@
 .forest-game .pack-item.neighbor {box-shadow:inset 0 0 0 2px #667c3d;}
 .pack-item.spent {filter:saturate(.35);opacity:.65;}
 .forest-game .pack-item.drag-source {opacity:.18;}
+.forest-game .pack-item.swap-target {outline:3px dashed #fff0af;outline-offset:-4px;background:#bfbc6c99;z-index:4;}
+.forest-game .pack-item.swap-blocked {outline:3px dashed #eea187;outline-offset:-4px;z-index:4;}
+.forest-game .bag-cell.swap-return {background:#9eae66;box-shadow:inset 0 0 0 3px #fff0af;}
 .item-name {font-size:10px;line-height:1.3;color:#292c1c;font-weight:600;text-shadow:0 1px #d1bd8c;max-width:100%;}
 .item-cost {position:absolute;right:2px;top:2px;background:#26371de8;color:#f4e7bf;padding:2px 4px;font-size:9px;}
 .bag-toolbar { @apply flex items-center justify-between gap-[10px]; color:#bcc4a5;font-size:10px;margin:12px 0;}
@@ -149,7 +152,12 @@
 .route-options>button>span:last-child {margin-left:auto;color:#c4ceab;}
 .turn-note {display:flex;justify-content:space-between;align-items:center;margin:0 0 12px;color:#d5dbbd;font-size:12px;}
 .shop-grid {display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0;}
-.shop-grid button {padding:8px;background:#36422b;border:1px solid #617145;display:grid;grid-template-columns:45px 1fr;text-align:left;gap:2px 8px;align-items:center;}
+.shop-grid article {padding:12px;background:#36422b;border:1px solid #617145;min-width:0;display:flex;flex-direction:column;}
+.shop-item-heading { @apply flex items-center gap-2; }
+.shop-item-heading h3 {font-size:14px;}
+.shop-item-heading small {color:#d4ddbd;}
+.shop-grid article>p {font-size:13px;line-height:1.8;margin:10px 0;}
+.forest-game .shop-grid .secondary {margin-top:auto;min-height:44px;font-size:13px;color:#ffe3a2;}
 .shop-grid .forest-art {width:45px;height:50px;grid-row:span 2;}
 .shop-grid b {font-size:11px;font-weight:500;}
 .shop-grid span {font-size:11px;color:#e3c77f;}
@@ -193,3 +201,56 @@
 @media(max-width:760px) {.forest-header {flex-wrap:wrap;gap:10px;padding:12px 16px;} .journey-status {margin-left:auto;} .journey-status>span:first-child {display:none;} .forest-header nav {width:100%;justify-content:space-between;} .game-columns {grid-template-columns:1fr;padding:20px 16px;} .forest-scene {height:210px;} .hero {left:3%;width:110px;} .actor>.forest-art {height:115px;} .forest-game .enemy {width:105px;} .enemy.boss {width:130px;} .enemy.boss>.forest-art {height:140px;} .enemy-line {right:4%;gap:8px;} .actor>span:last-child {font-size:9px;} .scene-caption {font-size:11px;} .title-screen {padding:45px 24px 260px;min-height:850px;background-position:center;} .title-hero {width:210px;height:260px;right:10%;bottom:30px;} .title-copy h1 {font-size:55px;} .codex-grid {grid-template-columns:repeat(2,1fr);} .forest-modal {padding:24px;} .game-footer {flex-wrap:wrap;padding:12px 16px 24px;} .item-name {font-size:9px;} .energy {font-size:21px;}}
 @media(prefers-reduced-motion:reduce) {.forest-game * {transition:none!important;} .hero>.forest-art {transform:none!important;}}
 @media(max-width:760px){.journey-panel{display:contents;}.route-panel{grid-row:1;}.inventory-panel{grid-row:2;}.ground-area{grid-row:3;}.game-columns>.notice{grid-row:4;}.travel-log{grid-row:5;}.battle-controls{top:8px;padding:12px;}.combat-steps{font-size:12px;}.route-panel .combat-hint{font-size:12px;}}
+
+.quick-targets {margin-bottom:14px;}
+.quick-targets p {font-size:12px;color:#d4ddbd;margin-bottom:8px;}
+.forest-game .quick-targets button { @apply flex flex-col items-start justify-center gap-1; min-height:48px;flex:1;padding:8px 12px;border:1px solid #a5b67d;background:#35452b;text-align:left;}
+.quick-targets small {color:#e8d9af;}
+.forest-game {padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+.inventory-panel,.journey-panel {min-width:0;}
+@media(min-width:761px) and (max-width:840px) {
+  .forest-header {flex-wrap:wrap;}
+  .forest-header nav {width:100%;justify-content:flex-end;}
+  .game-columns {grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);}
+}
+@media(max-width:760px) {
+  .forest-header nav button,.forest-game .text-button,.forest-game .bag-toolbar button,.forest-game .ground-stash,.forest-game .tooltip-close,.forest-game .modal-close {min-height:44px;}
+  .forest-game .tooltip-close,.forest-game .modal-close {min-width:44px;}
+  .forest-header nav {flex-wrap:wrap;gap:4px;}
+  .forest-header nav button {font-size:12px;padding:8px 6px;}
+  .title-screen {min-height:calc(100svh - 130px);padding:28px 20px 180px;}
+  .title-copy {width:100%;}
+  .title-copy h1 {font-size:clamp(38px,10vw,55px);margin:18px 0;}
+  .title-copy>p:not(.eyebrow) {margin-bottom:18px;}
+  .title-hero {width:140px;height:170px;bottom:10px;right:5%;}
+  .forest-game .primary.large {width:100%;min-width:0;}
+  .forest-game .difficulty-picker button {min-height:44px;}
+  .game-columns {gap:18px;padding:18px 12px;}
+  .bag-toolbar {font-size:12px;align-items:start;}
+  .bag-toolbar button {min-width:52px;}
+  .battle-controls {position:static;}
+  .forest-scene {height:200px;}
+  .hero {left:2%;width:80px;}
+  .hero>.forest-art {height:100px;}
+  .enemy-line {right:3%;gap:6px;}
+  .forest-game .enemy {width:92px;}
+  .enemy.boss {width:125px;}
+  .scene-caption {max-width:94%;gap:10px;}
+  .scene-caption small {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ground-area {padding:12px;}
+  .ground-area h2 {font-size:19px;}
+  .ground-area>div:first-child {flex-wrap:wrap;}
+  .modal-curtain {padding:12px;}
+  .forest-modal {padding:44px 16px 20px;max-height:calc(100dvh - 24px);}
+  .save-buttons {flex-direction:column;gap:0;}
+  .forest-modal textarea {font-size:16px;}
+  .item-tooltip {max-height:45dvh;padding-top:34px;}
+  .shop-grid {gap:8px;}
+  .shop-item-heading {flex-wrap:wrap;}
+  .codex-grid article {padding:8px;min-width:0;}
+}
+@media(pointer:coarse) {
+  .bag-grid,.forest-game .pack-item {touch-action:pan-y;}
+  .pointer-guide {display:none;}
+  .forest-game .secondary,.forest-game .target-jump {min-height:44px;}
+}
