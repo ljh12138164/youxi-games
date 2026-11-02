@@ -1,5 +1,5 @@
-import { ENEMY_MAP, ITEM_MAP } from './content.ts';
-import { canPlace, COLS, ROWS, type Run } from './engine.ts';
+import { ENEMY_MAP, EVENTS, ITEM_MAP } from './content.ts';
+import { canPlace, COLS, ROWS, stepsInFloor, type Run } from './engine.ts';
 
 export const SAVE_KEY='youxi:backpack-expedition-h5:v1';
 const MAX_BYTES=2*1024*1024;
@@ -8,7 +8,9 @@ export function validateSave(value:unknown):value is Run {
   const r=value as Run;
   if(r.version!==1||!['map','prepare','battle','loot','shop','rest','event','expand','won','lost'].includes(r.phase))return false;
   if(![r.seed,r.seq,r.floor,r.step,r.hp,r.maxHp,r.gold,r.energy,r.block,r.poison,r.turn,r.xp,r.kills,r.battles,r.event].every(n=>Number.isSafeInteger(n)&&n>=0))return false;
-  if(r.floor<1||r.floor>3||r.step>5||r.maxHp<1||r.hp>r.maxHp||r.event>5||r.turn<1)return false;
+  if(r.stepsPerFloor!==undefined&&r.stepsPerFloor!==8)return false;
+  if(r.seenEvents!==undefined&&(!Array.isArray(r.seenEvents)||r.seenEvents.length>EVENTS.length||new Set(r.seenEvents).size!==r.seenEvents.length||r.seenEvents.some(i=>!Number.isSafeInteger(i)||i<0||i>=EVENTS.length)))return false;
+  if(r.floor<1||r.floor>3||r.step>=stepsInFloor(r)||r.maxHp<1||r.hp>r.maxHp||r.event>=EVENTS.length||r.turn<1)return false;
   if(r.hp===0&&r.phase!=='lost')return false;
   if(r.rescues!==undefined&&r.rescues!==0&&r.rescues!==1)return false;
   if(r.difficulty!==undefined&&!['easy','normal','hard'].includes(r.difficulty))return false;

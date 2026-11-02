@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { act, adjacent, canPlace, expansionCells, key, newRun, power, shape, type Run } from '../src/engine.ts';
+import { act, adjacent, canPlace, expansionCells, key, newRun, power, routes, shape, type Run } from '../src/engine.ts';
 import { ITEMS, ENEMIES, EVENTS, ITEM_MAP } from '../src/content.ts';
 import { parseSave, validateSave } from '../src/storage.ts';
 
-test('40 件物品、15 类敌人、6 个事件：ID 唯一，形状四次旋转不变',()=>{
-  assert.equal(ITEMS.length,40);assert.equal(ENEMIES.length,15);assert.equal(EVENTS.length,6);
+test('40 件物品、15 类敌人、12 个事件：ID 唯一，形状四次旋转不变',()=>{
+  assert.equal(ITEMS.length,40);assert.equal(ENEMIES.length,15);assert.equal(EVENTS.length,12);
   assert.equal(new Set(ITEMS.map(i=>i.id)).size,40);
   for(const item of ITEMS){assert.deepEqual(shape(item.id,4),shape(item.id));assert.equal(new Set(shape(item.id).map(([x,y])=>key(x,y))).size,item.shape.length);}
 });
@@ -44,10 +44,10 @@ test('存档恢复保留随机结果，拒绝重叠物品、未来版本和无�
   assert.equal(validateSave({...run,hp:NaN}),false);
   assert.throws(()=>parseSave('not json'));
 });
-test('商店空间不足不扣款，扩容只能接边，事件只能选择一次',()=>{
+test('商店空间不足仍可购买到地上，扩容只能接边，事件只能选择一次',()=>{
   let run=newRun(5);run.step=1;run=act(run,{type:'node',kind:'shop'}).run;
   run.gold=500;run.bag=[];
-  const result=act(run,{type:'buy',def:run.offers[0]});assert.ok(result.error);assert.equal(result.run.gold,500);
+  const def=run.offers[0],result=act(run,{type:'buy',def});assert.equal(result.error,undefined);assert.equal(result.run.gold,500-ITEM_MAP[def].price);assert.equal(result.run.loot[0].def,def);
   run=newRun(5);run.phase='expand';assert.ok(expansionCells(run).includes('6,0'));
   assert.ok(act(run,{type:'expand',cell:'6,4'}).error);
   run=act(run,{type:'expand',cell:'6,0'}).run;assert.equal(run.bag.length,25);assert.equal(run.phase,'map');
@@ -85,7 +85,7 @@ export function playJourney(seed:number):Run {
   };
   for(let n=0;n<2000&&!['won','lost'].includes(run.phase);n++){
     switch(run.phase){
-      case 'map':send({type:'node',kind:run.step===1?'shop':run.step===3?'rest':run.step===5?'boss':'battle'});break;
+      case 'map':{const options=routes(run);send({type:'node',kind:options.includes('rest')?'rest':options.includes('battle')?'battle':options[0]});break;}
       case 'prepare':send({type:'start'});break;
       case 'battle':{
         for(const i of run.items)if(run.phase==='battle'&&!i.used&&ITEM_MAP[i.def].kind==='heal'&&run.hp<=run.maxHp-ITEM_MAP[i.def].power)send({type:'use',uid:i.uid});
@@ -104,7 +104,7 @@ export function playJourney(seed:number):Run {
         }
         send({type:'leave'});break;
       }
-      case 'shop':for(const id of run.offers)if(['weapon','shield','armor','heal'].includes(ITEM_MAP[id].kind))send({type:'buy',def:id});send({type:'leave'});break;
+      case 'shop':for(const id of run.offers)if(['weapon','shield','armor','heal'].includes(ITEM_MAP[id].kind)){if(send({type:'buy',def:id})){for(const i of run.loot)fit(i.uid);}}send({type:'leave'});break;
       case 'rest':send({type:'rest',choice:'heal'});break;
       case 'event':send({type:'event',accept:true});break;
       case 'expand':send({type:'expand',cell:expansionCells(run)[0]});break;

@@ -19,6 +19,8 @@ export type Run = {
   discoveries: string[]; battles: number; savedAt: number;
   rescues?: number;
   difficulty?: Difficulty;
+  stepsPerFloor?: 8;
+  seenEvents?: number[];
 };
 export type Action =
   | { type: 'node'; kind: NodeKind }
@@ -49,6 +51,36 @@ export function canPlace(run: Run, item: Item, x: number,y: number,rotation: num
   const occupied = new Set(run.items.filter(i=>i.uid!==item.uid).flatMap(i=>cellsOf(i).map(([a,b])=>key(a,b))));
   return shape(item.def,rotation).every(([a,b])=>run.bag.includes(key(a+x,b+y))&&!occupied.has(key(a+x,b+y)));
 }
+export function swapPlan(run:Run,item:Item,x:number,y:number,rotation:number):Item[]|undefined {
+  const moved={...item,x,y,rotation},destination=cellsOf(moved).map(([a,b])=>key(a,b));
+  const targets=run.items.filter(i=>i.uid!==item.uid&&cellsOf(i).some(([a,b])=>destination.includes(key(a,b))));
+  if(!targets.length)return;
+  const cleared={...run,items:run.items.filter(i=>i.uid!==item.uid&&!targets.some(t=>t.uid===i.uid))};
+  if(!canPlace(cleared,item,x,y,rotation))return;
+  if(!run.items.some(i=>i.uid===item.uid))return targets.map(i=>({...i,x:-1,y:-1}));
+  const fixed={...cleared,items:[...cleared.items,moved]};
+  const freed=new Set(cellsOf(item).map(([a,b])=>key(a,b)).filter(c=>!destination.includes(c)));
+  const options=targets.map(target=>{
+    const choices:Array<{item:Item;cells:string[];returned:number;distance:number}>=[];
+    for(let row=0;row<ROWS;row++)for(let col=0;col<COLS;col++){
+      if(!canPlace(fixed,target,col,row,target.rotation))continue;
+      const candidate={...target,x:col,y:row},cells=cellsOf(candidate).map(([a,b])=>key(a,b));
+      choices.push({item:candidate,cells,returned:cells.filter(c=>freed.has(c)).length,distance:Math.abs(col-item.x)+Math.abs(row-item.y)});
+    }
+    return choices.sort((a,b)=>b.returned-a.returned||a.distance-b.distance);
+  }).sort((a,b)=>a.length-b.length);
+  // At most one target per destination cell; current item shapes occupy at most four cells.
+  function fit(index:number,occupied:Set<string>):Item[]|undefined {
+    if(index===options.length)return [];
+    for(const candidate of options[index]){
+      if(candidate.cells.some(c=>occupied.has(c)))continue;
+      const rest=fit(index+1,new Set([...occupied,...candidate.cells]));
+      if(rest)return [candidate.item,...rest];
+    }
+  }
+  return fit(0,new Set());
+}
+export const stepsInFloor=(run:Run)=>run.stepsPerFloor??6;
 export function adjacent(a: Item,b: Item): boolean {
   return cellsOf(a).some(([x,y])=>cellsOf(b).some(([u,v])=>Math.abs(x-u)+Math.abs(y-v)===1));
 }
@@ -74,7 +106,7 @@ function log(run:Run,text:string) {run.log=[text,...run.log].slice(0,7);}
 function heal(run:Run,n:number) {run.hp=Math.min(run.maxHp,run.hp+n);}
 export function newRun(seed=Date.now(),difficulty:Difficulty='normal'): Run {
   const settings=DIFFICULTIES[difficulty];
-  const run:Run={version:1,difficulty,seed:(seed>>>0)||1,seq:1,phase:'map',floor:1,step:0,hp:settings.hp,maxHp:settings.hp,gold:settings.gold,energy:3,block:0,poison:0,turn:1,xp:0,kills:0,
+  const run:Run={version:1,difficulty,stepsPerFloor:8,seenEvents:[],seed:(seed>>>0)||1,seq:1,phase:'map',floor:1,step:0,hp:settings.hp,maxHp:settings.hp,gold:settings.gold,energy:3,block:0,poison:0,turn:1,xp:0,kills:0,
     bag:Array.from({length:24},(_,i)=>key(i%6,Math.floor(i/6))),items:[],loot:[],enemies:[],offers:[],node:'battle',event:0,log:['把行囊收拾好，再选一条路出发。'],discoveries:[],battles:0,savedAt:0,rescues:0};
   for(const [def,x,y] of [['staff',0,0],['shield',1,0],['potion',3,0],['bread',3,2],['flower',1,2]] as const)run.items.push(makeItem(run,def,x,y));
   if(difficulty==='easy')run.items.push(makeItem(run,'potion',4,0));
@@ -82,6 +114,7 @@ export function newRun(seed=Date.now(),difficulty:Difficulty='normal'): Run {
   return run;
 }
 export function routes(run:Run):NodeKind[] {
+  if(stepsInFloor(run)===8)return ([['battle','event'],['shop','event'],['battle','elite'],['rest','event'],['event'],['shop','rest'],['battle','elite'],['boss']] as NodeKind[][])[run.step]??[];
   return ([['battle','event'],['shop','event'],['battle','elite'],['rest','event'],['battle','elite'],['boss']] as NodeKind[][])[run.step]??[];
 }
 export function expansionCells(run:Run):string[] {
@@ -124,16 +157,12 @@ function wonBattle(run:Run) {
 }
 function advance(run:Run) {
   run.loot=[];run.offers=[];run.enemies=[];
-  if(run.step===5){
+  if(run.step===stepsInFloor(run)-1){
     if(run.floor===3){run.phase='won';log(run,'老树让开了道路。你带着装满的行囊，走出了遗庭。');return;}
     run.floor++;run.step=0;run.maxHp+=3;heal(run,Math.ceil(run.maxHp/2));log(run,'走入下一层遗迹。生命上限 +3，恢复一半最大生命。');
   }else run.step++;
   run.phase=run.node==='boss'||(run.node==='battle'||run.node==='elite')&&run.xp%2===0?'expand':'map';
   if(run.phase==='expand'&&!expansionCells(run).length)run.phase='map';
-}
-function findFit(run:Run,item:Item):Item|null {
-  for(let r=0;r<4;r++)for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(canPlace(run,item,x,y,r))return {...item,x,y,rotation:r};
-  return null;
 }
 const editable=(phase:Phase)=>['map','prepare','loot','shop','rest','event'].includes(phase);
 export function act(current:Run,action:Action):{run:Run;error?:string} {
@@ -150,7 +179,12 @@ export function act(current:Run,action:Action):{run:Run;error?:string} {
         run.enemies=ids.map(def=>({uid:run.seq++,def,hp:ENEMY_MAP[def].hp,block:0,poison:0}));
         run.turn=1;run.poison=0;run.phase='prepare';resetTurn(run);log(run,'前面有动静。可以先整理装备，再开始战斗。');
       }else if(action.kind==='shop'){run.phase='shop';run.offers=rollItems(run,4);}
-      else if(action.kind==='event'){run.phase='event';run.event=Math.floor(random(run)*EVENTS.length);}
+      else if(action.kind==='event'){
+        run.phase='event';
+        let choices=EVENTS.map((_,i)=>i).filter(i=>!run.seenEvents?.includes(i));
+        if(!choices.length){run.seenEvents=[];choices=EVENTS.map((_,i)=>i);}
+        run.event=choices[Math.floor(random(run)*choices.length)];run.seenEvents=[...(run.seenEvents??[]),run.event];
+      }
       else run.phase='rest';
       break;
     }
@@ -158,7 +192,15 @@ export function act(current:Run,action:Action):{run:Run;error?:string} {
       if(!editable(run.phase))return fail('战斗中不能移动物品。');
       const item=[...run.items,...run.loot].find(i=>i.uid===action.uid);
       if(!item)return fail('找不到这件物品。');
-      if(!Number.isInteger(action.x)||!Number.isInteger(action.y)||!Number.isInteger(action.rotation)||!canPlace(run,item,action.x,action.y,action.rotation))return fail('这里放不下，物品已留在原位。');
+      if(!Number.isInteger(action.x)||!Number.isInteger(action.y)||!Number.isInteger(action.rotation)||action.rotation<0||action.rotation>3)return fail('这里放不下，物品已留在原位。');
+      const swap=swapPlan(run,item,action.x,action.y,action.rotation);
+      if(!canPlace(run,item,action.x,action.y,action.rotation)&&!swap)return fail('这里放不下，物品已留在原位。');
+      if(swap){
+        const inBag=run.items.some(i=>i.uid===item.uid);
+        run.items=run.items.filter(i=>!swap.some(t=>t.uid===i.uid));
+        if(inBag)run.items.push(...swap);
+        else run.loot.push(...swap);
+      }
       run.items=run.items.filter(i=>i.uid!==item.uid);run.loot=run.loot.filter(i=>i.uid!==item.uid);
       run.items.push({...item,x:action.x,y:action.y,rotation:action.rotation});break;
     }
@@ -226,14 +268,13 @@ export function act(current:Run,action:Action):{run:Run;error?:string} {
     case 'buy': {
       if(run.phase!=='shop'||!run.offers.includes(action.def))return fail('这件物品已经不在摊位上了。');
       const d=ITEM_MAP[action.def];if(run.gold<d.price)return fail('金币不够。可以先卖掉不需要的装备。');
-      const item:Item={uid:run.seq,def:d.id,x:-1,y:-1,rotation:0,used:0};const fitted=findFit(run,item);
-      if(!fitted)return fail('背包放不下，先整理一下。金币没有扣除。');
-      run.gold-=d.price;run.seq++;run.items.push(fitted);run.offers=run.offers.filter(id=>id!==d.id);if(!run.discoveries.includes(d.id))run.discoveries.push(d.id);log(run,`买下${d.name}，已放进背包。`);break;
+      run.gold-=d.price;run.loot.push(makeItem(run,d.id));run.offers=run.offers.filter(id=>id!==d.id);log(run,`买下${d.name}，已放在地上，记得整理进行囊。`);break;
     }
     case 'sell': {
       if(run.phase!=='shop')return fail('只有商店会收购装备。');
-      const item=run.items.find(i=>i.uid===action.uid);if(!item)return fail('找不到这件物品。');
-      run.items=run.items.filter(i=>i.uid!==item.uid);run.gold+=Math.floor(ITEM_MAP[item.def].price/2);break;
+      const item=[...run.items,...run.loot].find(i=>i.uid===action.uid);if(!item)return fail('找不到这件物品。');
+      if(ITEM_MAP[item.def].kind==='weapon'&&![...run.items,...run.loot].some(i=>i.uid!==item.uid&&ITEM_MAP[i.def].kind==='weapon'))return fail('这是最后一件武器，先买到替代武器再出售。');
+      run.items=run.items.filter(i=>i.uid!==item.uid);run.loot=run.loot.filter(i=>i.uid!==item.uid);run.gold+=Math.floor(ITEM_MAP[item.def].price/2);break;
     }
     case 'rest':
       if(run.phase!=='rest')return fail('现在没有营地可休息。');
@@ -242,8 +283,19 @@ export function act(current:Run,action:Action):{run:Run;error?:string} {
     case 'event': {
       if(run.phase!=='event')return fail('这件事情已经结束了。');
       const e=EVENTS[run.event];
-      if(action.accept){if(e.kind==='trade'){if(run.gold<8)return fail('还差几枚金币。');run.gold-=8;heal(run,e.value);}else if(e.kind==='gold')run.gold+=e.value;else if(e.kind==='maxHp'){run.maxHp+=e.value;heal(run,e.value);}else heal(run,e.value);log(run,e.action);}
-      advance(run);break;
+      if(action.accept){
+        const gold=e.costGold??(e.kind==='trade'?8:0),hp=e.costHp??0;
+        if(run.gold<gold)return fail('金币不够，可以选择继续赶路。');
+        if(run.hp<=hp)return fail('生命不足以安全完成这件事，可以选择继续赶路。');
+        run.gold-=gold;run.hp-=hp;
+        if(e.kind==='gold')run.gold+=e.value;
+        else if(e.kind==='maxHp'){run.maxHp+=e.value;heal(run,e.value);}
+        else if(e.kind!=='item')heal(run,e.value);
+        log(run,e.action);
+      }
+      advance(run);
+      if(action.accept&&e.kind==='item'&&e.item){run.loot.push(makeItem(run,e.item));log(run,`获得${ITEM_MAP[e.item].name}，已放在地上，装进行囊再走。`);}
+      break;
     }
     case 'expand':
       if(run.phase!=='expand'||!expansionCells(run).includes(action.cell))return fail('选一格与背包边相邻的空位。');
