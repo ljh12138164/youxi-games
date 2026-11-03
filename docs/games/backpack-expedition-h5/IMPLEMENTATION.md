@@ -1,5 +1,7 @@
 # 背包远征可玩 Alpha：实现与验收
 
+> 当前为迁移中的 WIP 检查点，用户要求内容、功能和界面 UI 全部迁移；尚未完成 UI 对照验收。后续以 [MIGRATION-HANDOFF.md](./MIGRATION-HANDOFF.md) 的待办和验证状态为准，下面的通过记录各自仅对应当时产物。
+
 日期：2026-11-01，持续更新至 2026-11-03。开发基线为用户选择的 B「暖色森林行囊」，后续采用已确认的粗像素样稿。当前状态：可玩 Alpha，本次迭代提交到 feat 分支供检查，尚未登记上线或发布；最新记录见文末。
 
 ## 试玩
@@ -113,3 +115,50 @@
 独立包平台自动自测 17 passed、0 failed、0 blocked，报告 `reports/backpack-expedition-h5/platform-pixel-art.json`；总体仍为 incomplete，实体设备、Safari、人工听音与正式平台外壳未测。未制作独立攻击／受击动画。
 
 截图：`reports/backpack-expedition-h5/pixel-title-desktop.png`、`pixel-battle-desktop.png`、`pixel-battle-mobile.png`、`iteration-boss-desktop.png`、`iteration-boss-mobile.png`、`iteration-codex.png`。用户要求将本次迭代提交并推送到 `feat/backpack-expedition-pixel-iteration` 分支供后续查看，未授权合并或发布。
+
+## 道具使用动作（2026-11-03）
+
+成功使用主动装备后，用现有角色和道具图片播放约 750ms 的离散动作，覆盖近战出手、拉弓箭迹、举盾、喝药和进食；命中敌人闪动，击败目标保留短暂退场表现并禁止再次点击。提示中的生命、护盾和能量变化来自动作前后的真实状态，失败不播放成功动画，连续操作替换当前表现，不锁住操作。动画结束只清理界面状态，不再次结算伤害、不保存动画状态。暂停冻结角色、道具、箭迹和结果提示；减少动态效果时保留静态结果提示，不播放位移或闪动。手机沿用紧凑操作区，横屏恢复人物显示以便看到动作，没有新增图片、依赖或玩法数值。
+
+新增 `item-motion.browser.mjs` 验证真实数值、失败不播、动作结束不重复结算、暂停时间与箭迹冻结、恢复、弓、消耗品、击败退场、手机布局及减少动态效果；动作测试与四组相关战斗／手机／商店回归通过。类型检查、lint（其他游戏原有 6 条 warning）、整站和独立构建通过；独立 HTML 手机动画实测通过，平台自动检查 17 passed、0 failed、0 blocked，报告 `platform-item-motion.json`，总体仍为 incomplete。截图 `item-weapon-motion.png`、`item-heal-motion.png`、`item-mobile-motion.png`。实体手机、Safari 和人工听音未测。本轮未提交、推送或发布。
+
+## 手机战斗布局与像素 UI（2026-11-03）
+
+针对战场、说明与回合按钮把背包推到屏幕下方的问题，手机改为紧凑顶栏与按需展开菜单，缩短战场，选敌按钮保留在背包前，结束回合固定在底部。手机战斗点击物品不自动弹详情，底部“详情”可主动查看；Boss／精英机制在背包后展开，保留完整行动预告。进入游戏回到页面顶部，横屏战场与背包左右排列；桌面保留分栏及点击详情。物品整理、商店、存档和暂停继续使用原规则。
+
+界面统一像素式硬边明暗框、方形控件、实色偏移阴影与按压反馈，移除弹窗背景模糊，覆盖按钮、菜单、血条、背包边框及羊皮纸详情；文字仍使用原有可读字体，没有新增字体、图片或依赖。
+
+验证：82 项单元测试通过；9 组浏览器回归通过，新增 `mobile-combat-layout.browser.mjs` 验证 320×640、390×844、660×844 及 844×390 横屏下背包不被回合栏遮挡、无需滚动即可攻击、主动详情、菜单与存档，以及挑战 Boss 机制和选中后的完整行动预告。保留原有触屏滑动、旋转、换位、商店、桌面拖放及旧档回归。浏览器用 Chromium 触屏模拟和 CDP 合成触摸，实体手机与 Safari 尚未实测。
+
+类型检查、整站和独立构建通过；lint 无新增问题（其他游戏已有 6 条 warning）。独立 HTML 的手机首战、选武器、快捷攻击与结束回合实测通过；平台自动自测 17 passed、0 failed、0 blocked，报告 `reports/backpack-expedition-h5/platform-mobile-pixel-ui.json`，总体仍为 incomplete。界面静态检查指出横屏场景的粗分隔边，已改为 1px。截图 `pixel-mobile-390.png`、`pixel-mobile-320-boss.png`、`pixel-mobile-844.png`、`pixel-ui-singlefile-mobile.png`。本轮改动尚未提交、推送或发布。
+
+
+## 中文像素字体（2026-11-03）
+
+标题、菜单、按钮、道具文字、详情和存档输入改用本地 Fusion Pixel 12px proportional 简体中文字体（固定 2026.10.25 版），替换系统黑体／宋体声明。字体文件 701,520 字节，未修改字形；来源、哈希和主许可及上游许可记录在素材目录中。就绪状态等待字体加载，许可全文通过 raw import 随包保留，可在玩法说明展开查看。字体变化后调整手机行动标签行高，并隐藏重复的“点击攻击”前缀，完整预告和同屏背包继续保留。
+
+字体实际加载与覆盖、手机／横屏、Boss／商店、道具动画四组浏览器回归通过；类型、lint（原有 6 条 warning）、整站和独立构建通过。独立 HTML 验证含 WOFF2 data URL 与许可全文，断开外部字体服务也能显示；平台自测 17 passed、0 failed、0 blocked，报告 platform-pixel-font.json，总体仍为 incomplete。截图 pixel-font-title.png、pixel-font-mobile.png、pixel-font-desktop.png、pixel-font-singlefile.png。实体手机和 Safari 未测，本轮未提交、推送或发布。
+
+## H5 / 抖音共用 Canvas 迁移与字体回退（2026-11-03）
+
+本节是当前实现，前文是历史迭代记录。按用户“完整迁移、避免维护两个版本”的要求，移除原 React 界面及早期独立抖音原型，两端均运行 `src/canvas-game.ts`，规则与内容继续使用原 `engine.ts`、`content.ts`。仅保留浏览器和 TT 两个宿主适配器，处理输入、生命周期、存储、文本导入导出和音频；后续玩法、文案、界面与动画修改一处即可。详情见 [迁移说明](../../../games/backpack-expedition-h5/douyin/README.md)。
+
+全部旅途阶段、三档难度、43 件装备、15 类敌人、12 个事件、商店买卖与换货、地图分支、扩容、图鉴、帮助、日志、备份与存档导入导出均已接入共享界面。保留电脑拖放居中、右键 / R 旋转、多目标交换预览与原子提交、非法落点回退，手机使用点选放置与滑动；快捷目标、结束回合固定操作区和横屏并排布局继续有效。动作只表现真实引擎结算，暂停冻结动作与待机帧，不重复扣血。
+
+按用户最新反馈撤回像素字体及字形图集，改用系统中文无衬线字体；正文至少 14px。背包格内不再堆放完整名称，而用高对比度两字类别标记；完整名称在底部详情按钮及详情面板显示，避免文字被格子和 L 形边缘裁切。像素素材、直角边框和森林配色保留。
+
+H5 原存档键不变，TT 使用独立存档键，两端共用格式校验、备份和旧窗口覆盖保护，可手动导入导出。引擎状态明确为 JSON 可序列化数据，复制改为 JSON 往返，避免官方模拟器环境中原生 `structuredClone` 绑定产生 Illegal invocation。此变化已通过原有规则与三层正常流程测试。
+
+当前验证：83 项单元测试通过；新的 `canvas-migration.browser.mjs` 替换针对已移除 React DOM 的历史浏览器回归，覆盖真实鼠标、键盘、CDP 触屏滑动、首战、旋转交换、商店落地与换货、事件 / 营地 / 扩容、旧档、图鉴、导入校验、难度重开、暂停 / 动画及 320 / 390 / 660px 竖屏与 844px 横屏。另验证实际 TT bundle 在浏览器宿主替身下的触摸、存档、前后台暂停与静音，不将其称作官方模拟器回归。
+
+类型、lint（本游戏无警告，其他游戏原有 6 条 warning）、整站、独立 H5 及抖音构建通过。独立 H5 约 6.81 MB；TT 为单独 JS 和原图资源，无网页运行时依赖。CI 新增共享界面及 TT bundle 回归，保存两种产物，不自动上传或发布抖音小游戏。
+
+H5 本地平台自测 17 passed、0 failed、0 blocked，报告 `reports/backpack-expedition-h5/platform-canvas-migration.json`，总体仍为 incomplete。官方 IDE 4.5.7 已导入、编译、显示系统字体与新类别标记，恢复实际已有进度，并取得进入游戏 / 场景切换的截图和 console 状态；窗口变化后重新锚定为 windowId 4。由于用户同时操作工具，部分后续截图与日志时点不同，不将这些步骤算作完整官方自动回归。实体抖音 Android / iPhone、Safari、真机音频及提审仍未执行，未上传或发布。
+
+新命令：`pnpm run build:backpack:douyin`、`pnpm run test:backpack:canvas`。截图：`canvas-shop-desktop.png`、`canvas-battle-320.png`、`canvas-battle-390.png`、`canvas-battle-660.png`、`canvas-battle-844.png`；官方工具截图按 Skill 保留在操作系统临时目录。
+
+### 触屏与抖音模拟器拖动补充
+
+用户反馈抖音工具内无法拖动物品。复现确认旧输入分支对 `touch` 禁用拖动，而模拟器鼠标被 TT 转为触摸；加入真实 TT bundle 的 CDP 长按拖动回归后，观察到物品列仍为 3、预期为 5 的失败。现改为按住约 320ms 拿起物品，后续移动走共享拖放与交换逻辑；未达到长按阈值就滑动仍滚动页面，短按保持点选放置。支持边缘自动滚动，系统取消、暂停、窗口调整时取消手势，战斗中仍禁止整理。
+
+新增回归验证 TT 触摸长按移动、四格物品覆盖交换、取消及包外释放不改动物品；原触屏快速滑动、短按、桌面拖动、右键旋转及暂停检查同时通过。测试为真实 TT 产物加浏览器宿主替身，未宣称实体手机拖动已验收。

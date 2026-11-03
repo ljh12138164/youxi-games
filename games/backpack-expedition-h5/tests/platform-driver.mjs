@@ -5,13 +5,24 @@ export async function readState({frame}){
 }
 export async function start(context){
   const {frame,page}=context;
-  await frame.getByRole('button',{name:'收拾好，出发',exact:true}).click();
-  await frame.getByRole('button',{name:/林间遭遇/}).first().click();
-  await frame.getByRole('button',{name:/开始战斗/}).click();
+  await click(frame,'收拾好，出发');
+  await click(frame,'林间遭遇');
+  await click(frame,'开始战斗');
   const before=await readState(context);assert.equal(before.running,true);
   await page.waitForTimeout(400);
   assert((await readState(context)).progress>before.progress,'Actual hero idle frames must advance before checking pause.');
 }
 export async function setManualPaused({frame},paused){
-  await frame.getByRole('button',{name:paused?'暂停':'继续远征',exact:true}).click();
+  if(paused){await click(frame,'菜单');await click(frame,'暂停');}
+  else await click(frame,'继续远征');
+}
+async function click(frame,label){
+  const canvas=frame.locator('canvas');
+  const point=await canvas.evaluate((canvas,label)=>{
+    const hit=globalThis.__backpackGame.getHits().find(h=>h.enabled&&h.label===label);
+    if(!hit)throw Error('Missing Canvas control: '+label);
+    const ratio=canvas.getBoundingClientRect().width/Math.max(360,Math.min(1120,innerWidth));
+    return {x:(hit.x+hit.w/2)*ratio,y:(hit.y+hit.h/2)*ratio};
+  },label);
+  await canvas.click({position:point});
 }

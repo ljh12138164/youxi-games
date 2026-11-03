@@ -30,3 +30,7 @@
 场景初稿 [forest-pixel-v1.png](../../../../docs/games/backpack-expedition-h5/art/forest-pixel-v1.png) 为 1536×1024 RGB，源文件 `exec-c97eb3bc-a5eb-4213-b524-a21e6926a24b.png`，[提示词](../../../../docs/games/backpack-expedition-h5/art/forest-pixel-v1.prompt.txt)。桌面战场裁切过多，故以初稿和已确认样稿为参考生成 3:1 横幅，最终游戏只引用 v2。保留初稿用于来源追溯。
 
 物品映射见 `../item-sprites.ts`，背包、地上、拖拽、图鉴、商店与详情共用；角色映射见 `../actor-sprites.ts`，精英与 Boss 各有独立区域。SVG 使用归一化四列格裁切并限制邻格显示，背景与精灵使用像素采样。这是生成的粗像素风素材，不宣称原生 32×32 手绘、统一源像素网格或任意视口下整数放大。独立攻击／受击帧尚未制作。
+
+## Canvas 迁移与字体（2026-11-03）
+
+H5 和抖音共用 Canvas 裁片绘制，图像映射与像素采样不变。按用户后续反馈撤回 Fusion Pixel 字体及字形图集，正文改用运行环境的系统中文无衬线字体，不再随包分发第三方字体。背包内只显示简短类别标记，完整名称在选中后的详情中显示，避免单格名称溢出或被 L 形裁剪。

@@ -1,3 +1,4 @@
+export const SOUND_TONES={hit:220,move:440,reward:660,end:330} as const;
 export class ForestAudio {
   private context:AudioContext|null=null;
   private master:GainNode|null=null;
@@ -17,7 +18,7 @@ export class ForestAudio {
       void this.context.resume();
       const oscillator=this.context.createOscillator(),gain=this.context.createGain();
       const start=this.context.currentTime;
-      oscillator.type='triangle';oscillator.frequency.setValueAtTime({hit:220,move:440,reward:660,end:330}[kind],start);
+      oscillator.type='triangle';oscillator.frequency.setValueAtTime(SOUND_TONES[kind],start);
       oscillator.frequency.exponentialRampToValueAtTime(kind==='reward'?880:110,start+0.12);
       gain.gain.setValueAtTime(0.8,start);gain.gain.exponentialRampToValueAtTime(0.001,start+0.16);
       oscillator.connect(gain);gain.connect(this.master);oscillator.start(start);oscillator.stop(start+0.17);

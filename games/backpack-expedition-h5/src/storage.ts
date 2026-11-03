@@ -46,25 +46,33 @@ export function parseSave(text:string):Run {
   if(!validateSave(parsed))throw Error('存档格式不匹配或已经损坏。原来的进度还在。');
   return parsed;
 }
+export type SaveStorage={getItem:(key:string)=>string|null;setItem:(key:string,value:string)=>void};
+export function createSaveStore(storage:SaveStorage,saveKey=SAVE_KEY){
 let observed:string|null|undefined;
-export function readSave():{run?:Run;error?:string} {
+function readSave():{run?:Run;error?:string} {
   try{
-    const text=localStorage.getItem(SAVE_KEY);observed=text;
+    const text=storage.getItem(saveKey);observed=text;
     return text?{run:parseSave(text)}:{};
   }catch(error){return {error:error instanceof Error?error.message:'读取存档失败。'};}
 }
-export function writeSave(run:Run):{ok:boolean;error?:string} {
+function writeSave(run:Run):{ok:boolean;error?:string} {
   try{
-    const current=localStorage.getItem(SAVE_KEY);
+    const current=storage.getItem(saveKey);
     if(observed!==undefined&&current!==observed)return {ok:false,error:'另一窗口更新了进度。请先导出当前存档，再重新读取。'};
     if(!validateSave(run))return {ok:false,error:'当前进度未通过校验，未覆盖旧存档。'};
     const text=JSON.stringify({...run,savedAt:Date.now()});
-    if(current)localStorage.setItem(`${SAVE_KEY}:backup`,current);
-    localStorage.setItem(SAVE_KEY,text);observed=text;return {ok:true};
-  }catch{return {ok:false,error:'浏览器没有保存成功。请导出存档，避免关闭后丢失进度。'};}
+    if(current)storage.setItem(`${saveKey}:backup`,current);
+    storage.setItem(saveKey,text);observed=text;return {ok:true};
+  }catch{return {ok:false,error:'没有保存成功。请导出存档，避免关闭后丢失进度。'};}
 }
-export function restoreBackup():Run {
-  const text=localStorage.getItem(`${SAVE_KEY}:backup`);
+function restoreBackup():Run {
+  const text=storage.getItem(`${saveKey}:backup`);
   if(!text)throw Error('还没有可用备份。');
   return parseSave(text);
 }
+return {readSave,writeSave,restoreBackup};
+}
+const browserStore=/* @__PURE__ */createSaveStore({getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)});
+export function readSave(){return browserStore.readSave();}
+export function writeSave(run:Run){return browserStore.writeSave(run);}
+export function restoreBackup(){return browserStore.restoreBackup();}

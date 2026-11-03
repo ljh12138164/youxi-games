@@ -227,7 +227,7 @@ function advance(run:Run) {
 }
 const editable=(phase:Phase)=>['map','prepare','loot','shop','rest','event'].includes(phase);
 export function act(current:Run,action:Action):{run:Run;error?:string} {
-  const run=structuredClone(current);
+  const run:Run=JSON.parse(JSON.stringify(current));
   const fail=(error:string)=>({run:current,error});
   if(['won','lost'].includes(run.phase))return fail('这次远征已经结束。');
   switch(action.type){

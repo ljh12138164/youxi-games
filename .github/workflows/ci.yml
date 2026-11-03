@@ -30,6 +30,7 @@ jobs:
       - run: pnpm test
       - run: pnpm run build
       - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm run test:backpack:canvas
       - run: node --test games/long-night-embers-h5/tests/*.browser.mjs
       - run: pnpm run ci:games
       - name: Save independent packages and verification reports
@@ -39,6 +40,7 @@ jobs:
           name: games-${{ github.sha }}
           path: |
             dist/games/
+            dist/douyin/
             reports/
           if-no-files-found: warn
           retention-days: 14
