@@ -4,6 +4,7 @@ export type ItemDef = {
   power: number; cost: number; price: number; rarity: number;
   effect?: 'adjacent' | 'row' | 'thorns' | 'poison' | 'energy';
   description: string;
+  shopOnly?: boolean;
 };
 const rect = (w: number, h: number): [number, number][] => Array.from({ length: w * h }, (_, i) => [i % w, Math.floor(i / w)]);
 const entries: Array<[string, string, number, ItemDef['kind'], number, number, number, ItemDef['effect']?, number?, number?]> = [
@@ -42,6 +43,11 @@ export const ITEMS: ItemDef[] = entries.map(([id,name,icon,kind,power,cost,rarit
     : effect === 'row' ? `与弓占据同一行时，伤害 +${power}。`
     : `与武器边相邻时，伤害 +${power}。斜角不算。`,
 }));
+ITEMS.push(
+  {id:'forkblade',name:'岔枝重刃',icon:11,shape:[[0,0],[0,1],[1,1]],kind:'weapon',power:13,cost:2,price:24,rarity:2,shopOnly:true,description:'造成 13 点伤害；边相邻至少一件盾牌时伤害 +5，每次使用只加一次。每回合限用一次。'},
+  {id:'mossbow',name:'苔线长弓',icon:12,shape:rect(3,1),kind:'weapon',power:7,cost:1,price:24,rarity:2,effect:'row',shopOnly:true,description:'造成 7 点伤害，同行箭束与钥匙增加伤害；同行至少两件箭束时附加 2 层中毒。钥匙不计入箭束件数。每回合限用一次。'},
+  {id:'sproutshield',name:'回芽盾',icon:5,shape:rect(2,2),kind:'shield',power:8,cost:1,price:24,rarity:2,shopOnly:true,description:'获得 8 点护盾；边相邻至少一件护甲时额外获得 4 点护盾，每次使用只加一次。可以触发棘枝戒等持盾反击效果。'},
+);
 export const ITEM_MAP = Object.fromEntries(ITEMS.map(i => [i.id,i]));
 
 export type EnemyDef = { id: string; name: string; icon: number; hp: number; attack: number; pattern: ('attack'|'guard'|'poison')[] };

@@ -10,7 +10,10 @@ export const DIFFICULTIES = {
 export const difficultyOf = (run:Run) => DIFFICULTIES[run.difficulty??'easy'];
 export type NodeKind = 'battle'|'elite'|'boss'|'shop'|'rest'|'event';
 export type Item = { uid: number; def: string; x: number; y: number; rotation: number; used: number };
-export type Enemy = { uid: number; def: string; hp: number; block: number; poison: number };
+export type Enemy = { uid: number; def: string; hp: number; block: number; poison: number; broken?: boolean; stageTurn?: number };
+export type ShopKind='weapon'|'build'|'supply'|'any';
+export const REFRESH_PRICE=4;
+export const priceOf=(run:Run,def:string)=>run.ruleset===2&&def==='potion'?14:run.ruleset===2&&def==='trailmix'?10:ITEM_MAP[def].price;
 export type Run = {
   version: 1; seed: number; seq: number; phase: Phase; floor: number; step: number;
   hp: number; maxHp: number; gold: number; energy: number; block: number; poison: number;
@@ -21,6 +24,8 @@ export type Run = {
   difficulty?: Difficulty;
   stepsPerFloor?: 8;
   seenEvents?: number[];
+  ruleset?: 2;
+  shop?: {kinds:ShopKind[];refreshed:boolean;sold:string[]};
 };
 export type Action =
   | { type: 'node'; kind: NodeKind }
@@ -33,6 +38,7 @@ export type Action =
   | { type: 'leave' }
   | { type: 'buy'; def: string }
   | { type: 'sell'; uid: number }
+  | { type: 'refresh' }
   | { type: 'rest'; choice: 'heal'|'grow' }
   | { type: 'event'; accept: boolean }
   | { type: 'expand'; cell: string };
@@ -92,7 +98,15 @@ export function power(run: Run,item: Item): { value: number; sources: string[] }
       (def.effect==='row'&&d.effect==='row'&&cellsOf(item).some(c=>cellsOf(other).some(o=>o[1]===c[1]))));
     if (applies) { value+=d.power; sources.push(`${d.name} +${d.power}`); }
   }
+  if(def.id==='forkblade'&&run.items.some(i=>ITEM_MAP[i.def].kind==='shield'&&adjacent(item,i))){value+=5;sources.push('相邻盾牌 +5');}
+  if(def.id==='sproutshield'&&run.items.some(i=>ITEM_MAP[i.def].kind==='armor'&&adjacent(item,i))){value+=4;sources.push('相邻护甲 +4');}
   return {value,sources};
+}
+export function poisonOnHit(run:Run,item:Item){
+  if(ITEM_MAP[item.def].effect==='poison')return 2;
+  if(item.def!=='mossbow')return 0;
+  const arrows=run.items.filter(i=>['arrows','barbedarrows','silverarrows'].includes(i.def)&&cellsOf(item).some(c=>cellsOf(i).some(p=>c[1]===p[1])));
+  return arrows.length>=2?2:0;
 }
 function random(run: Run): number {
   let s=run.seed|0; s^=s<<13;s^=s>>>17;s^=s<<5;run.seed=s>>>0;
@@ -106,7 +120,7 @@ function log(run:Run,text:string) {run.log=[text,...run.log].slice(0,7);}
 function heal(run:Run,n:number) {run.hp=Math.min(run.maxHp,run.hp+n);}
 export function newRun(seed=Date.now(),difficulty:Difficulty='normal'): Run {
   const settings=DIFFICULTIES[difficulty];
-  const run:Run={version:1,difficulty,stepsPerFloor:8,seenEvents:[],seed:(seed>>>0)||1,seq:1,phase:'map',floor:1,step:0,hp:settings.hp,maxHp:settings.hp,gold:settings.gold,energy:3,block:0,poison:0,turn:1,xp:0,kills:0,
+  const run:Run={version:1,ruleset:2,difficulty,stepsPerFloor:8,seenEvents:[],seed:(seed>>>0)||1,seq:1,phase:'map',floor:1,step:0,hp:settings.hp,maxHp:settings.hp,gold:settings.gold,energy:3,block:0,poison:0,turn:1,xp:0,kills:0,
     bag:Array.from({length:24},(_,i)=>key(i%6,Math.floor(i/6))),items:[],loot:[],enemies:[],offers:[],node:'battle',event:0,log:['把行囊收拾好，再选一条路出发。'],discoveries:[],battles:0,savedAt:0,rescues:0};
   for(const [def,x,y] of [['staff',0,0],['shield',1,0],['potion',3,0],['bread',3,2],['flower',1,2]] as const)run.items.push(makeItem(run,def,x,y));
   if(difficulty==='easy')run.items.push(makeItem(run,'potion',4,0));
@@ -122,9 +136,41 @@ export function expansionCells(run:Run):string[] {
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(!run.bag.includes(key(x,y))&&[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>run.bag.includes(key(x+a,y+b))))result.push(key(x,y));
   return result;
 }
-export function intent(run:Run,enemy:Enemy) {
-  const def=ENEMY_MAP[enemy.def];const kind=def.pattern[(run.turn-1)%def.pattern.length];
-  return {kind,value:kind==='poison'?(run.floor===1?1:2):kind==='guard'?def.attack+2:Math.ceil(def.attack*difficultyOf(run).attack[run.floor-1])};
+const tactical=(run:Run,enemy:Enemy)=>run.ruleset===2&&run.difficulty==='hard'&&/^(elite|boss)/.test(enemy.def);
+export function encounterHint(run:Run,enemy:Enemy):string {
+  if(!tactical(run,enemy))return '';
+  switch(enemy.def){
+    case 'elite1':case 'boss1':return '破壳：打空护盾后，下一次攻击伤害 -4。举盾后会进攻，再休整一回合。';
+    case 'elite2':case 'boss2':return '孢雾：施毒后进攻，再休整一回合。此敌人施毒最多使你达到 3 层中毒。';
+    case 'elite3':return '重击：蓄力一回合后攻击，重击额外造成 6 点伤害，再休整一回合。提前准备盾牌与补给。';
+    default:return enemy.stageTurn?(run.turn<enemy.stageTurn?'半血觉醒：下回合进入第二阶段，先蓄力，再重击；重击后仍会休整。':'第二阶段：蓄力重击与施毒交替，重击后休整；施毒最多达到 3 层。'):'古树：蓄力重击后休整。半血后从下一回合进入第二阶段，保留休整窗口。';
+  }
+}
+export function intent(run:Run,enemy:Enemy):{kind:'attack'|'guard'|'poison'|'charge'|'rest';value:number;label:string} {
+  const def=ENEMY_MAP[enemy.def];let kind:'attack'|'guard'|'poison'|'charge'|'rest'=def.pattern[(run.turn-1)%def.pattern.length];
+  let bonus=0;
+  if(tactical(run,enemy)){
+    const patterns:Record<string,('attack'|'guard'|'poison'|'charge'|'rest')[]>={
+      elite1:['guard','attack','rest'],boss1:['guard','attack','rest','attack'],
+      elite2:['poison','attack','rest'],boss2:['poison','attack','rest','attack','guard'],
+      elite3:['charge','attack','rest'],boss3:['charge','attack','rest','guard','attack','rest'],
+    };
+    const stage=enemy.def==='boss3'&&enemy.stageTurn!==undefined&&run.turn>=enemy.stageTurn;
+    const pattern=stage?['charge','attack','rest','poison','attack','rest'] as const:patterns[enemy.def];
+    kind=pattern[(stage?run.turn-enemy.stageTurn!:run.turn-1)%pattern.length];
+    if(enemy.broken)bonus-=4;
+    if(stage)bonus+=2;
+    if(enemy.def==='elite3')bonus+=6;
+    if(enemy.def==='boss3'&&pattern[((stage?run.turn-enemy.stageTurn!:run.turn-1)+pattern.length-1)%pattern.length]==='charge')bonus+=10;
+  }
+  const attack=Math.ceil(def.attack*difficultyOf(run).attack[run.floor-1]);
+  const value=kind==='attack'?Math.max(1,attack+bonus):kind==='poison'?(run.floor===1?1:2):kind==='guard'?def.attack+2:kind==='charge'?attack+bonus+(enemy.def==='boss3'?10:0):0;
+  return {kind,value,label:kind==='attack'?`攻击 ${value}${enemy.broken?' · 破壳减伤':''}`:kind==='guard'?`护盾 ${value}`:kind==='poison'?`中毒 ${value}${tactical(run,enemy)?' · 最多 3 层':''}`:kind==='charge'?(enemy.stageTurn===run.turn+1?'蓄力 · 下回合转入觉醒':`蓄力 · 下回合攻击 ${value}`):'休整 · 本回合不行动'};
+}
+function updateStage(run:Run){
+  for(const e of run.enemies)if(tactical(run,e)&&e.def==='boss3'&&e.hp>0&&e.hp<=ENEMY_MAP[e.def].hp/2&&e.stageTurn===undefined){
+    e.stageTurn=run.turn+1;log(run,'古树枝条开始震动。下回合进入第二阶段，先蓄力，再重击。');
+  }
 }
 function resetTurn(run:Run) {
   run.energy=3+(run.items.some(i=>ITEM_MAP[i.def].effect==='energy')?1:0);
@@ -132,7 +178,7 @@ function resetTurn(run:Run) {
   for(const i of run.items)i.used=0;
 }
 function rollItems(run:Run,n:number):string[] {
-  const pool=ITEMS.filter(i=>i.rarity<=run.floor+1);
+  const pool=ITEMS.filter(i=>!i.shopOnly&&i.rarity<=run.floor+1);
   const ids:string[]=[];
   for(let i=0;i<n;i++) {const choices=pool.filter(d=>!ids.includes(d.id));ids.push(choices[Math.floor(random(run)*choices.length)].id);}
   if(!ids.some(id=>ITEM_MAP[id].kind==='weapon')){
@@ -145,6 +191,15 @@ function rollItems(run:Run,n:number):string[] {
   }
   return ids;
 }
+function rollShop(run:Run,kinds:ShopKind[],excluded:string[]=[]):string[]{
+  const ids:string[]=[];
+  for(const kind of kinds){
+    const pool=ITEMS.filter(d=>!excluded.includes(d.id)&&!ids.includes(d.id)&&d.rarity<=run.floor+1&&(!d.shopOnly||run.floor>=2)&&
+      (kind==='weapon'?d.kind==='weapon':kind==='build'?['charm','armor'].includes(d.kind)||d.id==='sproutshield':kind==='supply'?['heal','food','shield'].includes(d.kind)&&priceOf(run,d.id)<=16:true));
+    ids.push(pool[Math.floor(random(run)*pool.length)].id);
+  }
+  return ids;
+}
 function wonBattle(run:Run) {
   if(run.phase!=='battle'||run.enemies.some(e=>e.hp>0))return;
   run.phase='loot';run.battles++;run.xp++;run.poison=0;
@@ -152,11 +207,17 @@ function wonBattle(run:Run) {
   run.gold+=gold;
   const recovery=difficultyOf(run).recovery;
   heal(run,recovery);
-  run.loot=rollItems(run,3).map(d=>makeItem(run,d));
+  const ids=rollItems(run,run.ruleset===2&&run.node==='elite'?4:3);
+  if(run.ruleset===2&&run.node==='elite'){
+    const last=ids.length-1,kind=ITEM_MAP[ids[last]].kind;
+    const upgrades=ITEMS.filter(d=>!d.shopOnly&&d.kind===kind&&d.rarity===Math.min(3,run.floor+1)&&!ids.slice(0,last).includes(d.id));
+    if(upgrades.length)ids[last]=upgrades[Math.floor(random(run)*upgrades.length)].id;
+  }
+  run.loot=ids.map(d=>makeItem(run,d));
   log(run,`战斗结束。恢复 ${recovery} 点生命，获得 ${gold} 枚金币。挑些用得上的东西带走。`);
 }
 function advance(run:Run) {
-  run.loot=[];run.offers=[];run.enemies=[];
+  run.loot=[];run.offers=[];run.enemies=[];delete run.shop;
   if(run.step===stepsInFloor(run)-1){
     if(run.floor===3){run.phase='won';log(run,'老树让开了道路。你带着装满的行囊，走出了遗庭。');return;}
     run.floor++;run.step=0;run.maxHp+=3;heal(run,Math.ceil(run.maxHp/2));log(run,'走入下一层遗迹。生命上限 +3，恢复一半最大生命。');
@@ -178,7 +239,11 @@ export function act(current:Run,action:Action):{run:Run;error?:string} {
           [ENEMIES[(run.floor-1)*3+Math.floor(random(run)*3)].id,...(run.step>=2?[ENEMIES[(run.floor-1)*3+Math.floor(random(run)*3)].id]:[])];
         run.enemies=ids.map(def=>({uid:run.seq++,def,hp:ENEMY_MAP[def].hp,block:0,poison:0}));
         run.turn=1;run.poison=0;run.phase='prepare';resetTurn(run);log(run,'前面有动静。可以先整理装备，再开始战斗。');
-      }else if(action.kind==='shop'){run.phase='shop';run.offers=rollItems(run,4);}
+      }else if(action.kind==='shop'){
+        run.phase='shop';
+        if(run.ruleset===2){run.shop={kinds:['weapon','build','supply','any'],refreshed:false,sold:[]};run.offers=rollShop(run,run.shop.kinds);}
+        else run.offers=rollItems(run,4);
+      }
       else if(action.kind==='event'){
         run.phase='event';
         let choices=EVENTS.map((_,i)=>i).filter(i=>!run.seenEvents?.includes(i));
@@ -230,8 +295,14 @@ export function act(current:Run,action:Action):{run:Run;error?:string} {
       const target=run.enemies.find(e=>e.uid===action.target&&e.hp>0);
       if(d.kind==='weapon'&&!target)return fail('先选一个还活着的敌人。');
       run.energy-=d.cost;item.used++;
-      if(target){const n=power(run,item).value;target.hp=Math.max(0,target.hp-Math.max(0,n-target.block));target.block=Math.max(0,target.block-n);if(d.effect==='poison')target.poison+=2;log(run,`${d.name} 命中${ENEMY_MAP[target.def].name}，造成 ${n} 点伤害（护盾先抵挡）。`);if(!target.hp)run.kills++;}
-      if(d.kind==='shield')run.block+=d.power;
+      if(target){
+        const n=power(run,item).value,shield=target.block;
+        target.hp=Math.max(0,target.hp-Math.max(0,n-target.block));target.block=Math.max(0,target.block-n);target.poison+=poisonOnHit(run,item);
+        if(tactical(run,target)&&['elite1','boss1'].includes(target.def)&&shield>0&&target.block===0){target.broken=true;log(run,'护壳被打碎，敌人的下一次攻击伤害减少 4 点。');}
+        log(run,`${d.name} 命中${ENEMY_MAP[target.def].name}，造成 ${n} 点伤害（护盾先抵挡）。`);if(!target.hp)run.kills++;
+        updateStage(run);
+      }
+      if(d.kind==='shield')run.block+=power(run,item).value;
       if(d.kind==='heal'){heal(run,d.power);run.items=run.items.filter(i=>i.uid!==item.uid);log(run,`用了${d.name}，恢复 ${d.power} 点生命。`);}
       if(d.kind==='food'){run.energy+=d.power;run.items=run.items.filter(i=>i.uid!==item.uid);log(run,`吃了${d.name}，能量 +${d.power}。`);}
       wonBattle(run);break;
@@ -244,15 +315,17 @@ export function act(current:Run,action:Action):{run:Run;error?:string} {
         if(enemy.hp<=0)continue;
         const next=intent(run,enemy);enemy.block=0;
         if(next.kind==='guard'){enemy.block=next.value;log(run,`${ENEMY_MAP[enemy.def].name} 获得 ${next.value} 点护盾。`);}
+        else if(next.kind==='charge'||next.kind==='rest')log(run,`${ENEMY_MAP[enemy.def].name}${next.kind==='charge'?'正在蓄力，下回合重击。':'正在休整，本回合不行动。'}`);
         else{
-          if(next.kind==='poison'){run.poison+=next.value;log(run,`${ENEMY_MAP[enemy.def].name} 施加 ${next.value} 层中毒。`);}
-          else{const damage=Math.max(0,next.value-run.block);run.block=Math.max(0,run.block-next.value);run.hp=Math.max(0,run.hp-damage);log(run,`${ENEMY_MAP[enemy.def].name} 攻击，你失去 ${damage} 点生命。`);}
+          if(next.kind==='poison'){run.poison=tactical(run,enemy)?Math.min(3,run.poison+next.value):run.poison+next.value;log(run,`${ENEMY_MAP[enemy.def].name} 施加 ${next.value} 层中毒。`);}
+          else{const damage=Math.max(0,next.value-run.block);run.block=Math.max(0,run.block-next.value);run.hp=Math.max(0,run.hp-damage);delete enemy.broken;log(run,`${ENEMY_MAP[enemy.def].name} 攻击，你失去 ${damage} 点生命。`);}
           if(thorns&&next.kind==='attack'){enemy.hp=Math.max(0,enemy.hp-thorns);if(!enemy.hp)run.kills++;}
         }
         if(run.hp<=0)break;
       }
       if(run.hp>0){run.hp=Math.max(0,run.hp-run.poison);run.poison=Math.max(0,run.poison-1);}
       for(const enemy of run.enemies)if(enemy.hp>0&&enemy.poison){enemy.hp=Math.max(0,enemy.hp-enemy.poison);enemy.poison=Math.max(0,enemy.poison-1);if(!enemy.hp)run.kills++;}
+      updateStage(run);
       if(run.hp<=0&&(run.rescues??0)<difficultyOf(run).rescues){
         run.rescues=1;run.hp=Math.ceil(run.maxHp/2);run.poison=0;run.turn++;resetTurn(run);
         log(run,'这次撑住了，恢复一半生命。每次远征只有一次缓冲机会。');wonBattle(run);
@@ -267,14 +340,22 @@ export function act(current:Run,action:Action):{run:Run;error?:string} {
       advance(run);break;
     case 'buy': {
       if(run.phase!=='shop'||!run.offers.includes(action.def))return fail('这件物品已经不在摊位上了。');
-      const d=ITEM_MAP[action.def];if(run.gold<d.price)return fail('金币不够。可以先卖掉不需要的装备。');
-      run.gold-=d.price;run.loot.push(makeItem(run,d.id));run.offers=run.offers.filter(id=>id!==d.id);log(run,`买下${d.name}，已放在地上，记得整理进行囊。`);break;
+      const d=ITEM_MAP[action.def],price=priceOf(run,action.def);if(run.gold<price)return fail('金币不够。可以先卖掉不需要的装备。');
+      if(run.shop){run.shop.kinds.splice(run.offers.indexOf(d.id),1);run.shop.sold.push(d.id);}
+      run.gold-=price;run.loot.push(makeItem(run,d.id));run.offers=run.offers.filter(id=>id!==d.id);log(run,`买下${d.name}，已放在地上，记得整理进行囊。`);break;
+    }
+    case 'refresh':{
+      if(run.phase!=='shop'||!run.shop||run.shop.refreshed)return fail('这个摊位不能再换货了。');
+      if(!run.offers.length)return fail('商品已经售空了。');
+      if(run.gold<REFRESH_PRICE)return fail('换货需要 4 枚金币。');
+      run.gold-=REFRESH_PRICE;run.offers=rollShop(run,run.shop.kinds,run.shop.sold);run.shop.refreshed=true;
+      log(run,'花费 4 枚金币，摊主换下了还没卖出的商品。买过的货位不补回。');break;
     }
     case 'sell': {
       if(run.phase!=='shop')return fail('只有商店会收购装备。');
       const item=[...run.items,...run.loot].find(i=>i.uid===action.uid);if(!item)return fail('找不到这件物品。');
       if(ITEM_MAP[item.def].kind==='weapon'&&![...run.items,...run.loot].some(i=>i.uid!==item.uid&&ITEM_MAP[i.def].kind==='weapon'))return fail('这是最后一件武器，先买到替代武器再出售。');
-      run.items=run.items.filter(i=>i.uid!==item.uid);run.loot=run.loot.filter(i=>i.uid!==item.uid);run.gold+=Math.floor(ITEM_MAP[item.def].price/2);break;
+      run.items=run.items.filter(i=>i.uid!==item.uid);run.loot=run.loot.filter(i=>i.uid!==item.uid);run.gold+=Math.floor(priceOf(run,item.def)/2);break;
     }
     case 'rest':
       if(run.phase!=='rest')return fail('现在没有营地可休息。');

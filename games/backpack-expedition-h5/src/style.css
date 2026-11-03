@@ -23,7 +23,7 @@
 .forest-header nav button:hover {background:#33402a;border-color:#6a7850;}
 .forest-art {display:block;width:100%;height:100%;image-rendering:pixelated;pointer-events:none;}
 .eyebrow {font-size:10px;letter-spacing:2px;font-weight:600;color:#acb88d;}
-.title-screen {min-height:calc(100vh - 84px);background-size:cover;background-position:center;position:relative;display:flex;align-items:center;padding:7% 10%;}
+.title-screen {image-rendering:pixelated;min-height:calc(100vh - 84px);background-size:cover;background-position:center;position:relative;display:flex;align-items:center;padding:7% 10%;}
 .title-copy {position:relative;z-index:1;max-width:550px;}
 .title-copy h1 {font-family:Georgia,'Songti SC',SimSun,serif;font-size:clamp(48px,6vw,82px);font-weight:600;letter-spacing:3px;line-height:1.2;margin:24px 0;color:#fff1c8;text-shadow:0 3px 0 #182114;}
 .title-copy>p:not(.eyebrow) {font-size:16px;line-height:2;color:#dedec4;margin-bottom:34px;}
@@ -42,10 +42,8 @@
 .forest-game .secondary:hover {background:#b8a46a22;}
 .forest-game .text-button {display:block;text-decoration:underline;text-underline-offset:4px;font-size:12px;margin-top:18px;padding:3px 0;}
 .forest-game .danger {color:#f2b2a2;}
-.forest-scene {height:230px;position:relative;background-size:cover;background-position:center 63%;border-bottom:4px solid #8f6d37;isolation:isolate;overflow:hidden;}
+.forest-scene {image-rendering:pixelated;height:230px;position:relative;background-size:cover;background-position:center 90%;border-bottom:4px solid #8f6d37;isolation:isolate;overflow:hidden;}
 .forest-scene::after {content:'';position:absolute;inset:0;background:linear-gradient(0deg,#142011b0,transparent 38%);z-index:-1;}
-.forest-scene.floor-2 {background-position:center 40%;}
-.forest-scene.floor-3 {background-position:center 25%;}
 .scene-caption {position:absolute;top:15px;left:3%;background:#182214dc;border:1px solid #8e8153;padding:9px 14px;display:flex;gap:18px;align-items:center;}
 .scene-caption small {color:#c3cda9;}
 .actor {position:absolute;bottom:15px;text-align:center;}
@@ -58,11 +56,13 @@
 .enemy-line {position:absolute;right:13%;bottom:15px;display:flex;align-items:flex-end;gap:40px;}
 .forest-game .enemy {position:relative;bottom:0;width:155px;padding:0;opacity:1;}
 .enemy.boss {width:200px;}
-.enemy.boss>.forest-art {height:170px;}
+.enemy.boss>.forest-art {height:150px;}
 .enemy:not(:disabled):hover>.forest-art {filter:brightness(1.15) drop-shadow(0 0 3px #ffe1a3);}
 .intent {display:inline-block;font-size:11px;background:#793d29;padding:4px 9px;margin-bottom:0;border:1px solid #d69c66;box-shadow:0 2px #30241c;}
 .intent.guard {background:#3e5b57;border-color:#99b8a3;}
 .intent.poison {background:#485124;border-color:#b4be76;}
+.intent.charge {background:#715024;border-color:#e4c57d;}
+.intent.rest {background:#374a35;border-color:#9ab08c;}
 .game-columns {display:grid;grid-template-columns:minmax(380px,1.2fr) minmax(310px,.8fr);gap:32px;max-width:1230px;margin:auto;padding:24px 30px 18px;align-items:start;}
 .panel-heading { @apply flex items-center justify-between; margin-bottom:16px;}
 .panel-heading h2 {margin-top:4px;}
@@ -158,7 +158,7 @@
 .shop-item-heading small {color:#d4ddbd;}
 .shop-grid article>p {font-size:13px;line-height:1.8;margin:10px 0;}
 .forest-game .shop-grid .secondary {margin-top:auto;min-height:44px;font-size:13px;color:#ffe3a2;}
-.shop-grid .forest-art {width:45px;height:50px;grid-row:span 2;}
+.shop-grid .forest-art {width:64px;height:64px;flex-shrink:0;grid-row:span 2;}
 .shop-grid b {font-size:11px;font-weight:500;}
 .shop-grid span {font-size:11px;color:#e3c77f;}
 .notice {display:flex;align-items:start;gap:12px;background:#5b442c;border:1px solid #d8ad62;padding:12px 14px;font-size:12px;line-height:1.7;color:#fff0c9;}
@@ -198,7 +198,7 @@
 .drag-ghost>span {position:absolute;bottom:0;left:0;right:0;background:#1d2b15;color:#f4e4bc;font-size:10px;padding:6px;border:1px solid #b0ba83;}
 @media(min-width:1500px) {.forest-scene {height:280px;} .game-columns {max-width:1360px;}}
 @media(max-width:1000px) {.journey-status b {display:none;} .journey-status {gap:12px;} .game-columns {gap:20px;padding:20px;} .forest-header {gap:12px;} .wordmark>span:last-child {font-size:20px;} .wordmark small {font-size:8px;} .bag-frame {padding:9px;} .enemy-line {right:8%;gap:15px;} .hero {left:10%;} .forest-header nav button {padding:6px;font-size:11px;}}
-@media(max-width:760px) {.forest-header {flex-wrap:wrap;gap:10px;padding:12px 16px;} .journey-status {margin-left:auto;} .journey-status>span:first-child {display:none;} .forest-header nav {width:100%;justify-content:space-between;} .game-columns {grid-template-columns:1fr;padding:20px 16px;} .forest-scene {height:210px;} .hero {left:3%;width:110px;} .actor>.forest-art {height:115px;} .forest-game .enemy {width:105px;} .enemy.boss {width:130px;} .enemy.boss>.forest-art {height:140px;} .enemy-line {right:4%;gap:8px;} .actor>span:last-child {font-size:9px;} .scene-caption {font-size:11px;} .title-screen {padding:45px 24px 260px;min-height:850px;background-position:center;} .title-hero {width:210px;height:260px;right:10%;bottom:30px;} .title-copy h1 {font-size:55px;} .codex-grid {grid-template-columns:repeat(2,1fr);} .forest-modal {padding:24px;} .game-footer {flex-wrap:wrap;padding:12px 16px 24px;} .item-name {font-size:9px;} .energy {font-size:21px;}}
+@media(max-width:760px) {.forest-header {flex-wrap:wrap;gap:10px;padding:12px 16px;} .journey-status {margin-left:auto;} .journey-status>span:first-child {display:none;} .forest-header nav {width:100%;justify-content:space-between;} .game-columns {grid-template-columns:1fr;padding:20px 16px;} .forest-scene {height:210px;} .hero {left:3%;width:110px;} .actor>.forest-art {height:115px;} .forest-game .enemy {width:105px;} .enemy.boss {width:130px;} .enemy.boss>.forest-art {height:110px;} .enemy-line {right:4%;gap:8px;} .actor>span:last-child {font-size:9px;} .scene-caption {font-size:11px;} .title-screen {padding:45px 24px 260px;min-height:850px;background-position:center;} .title-hero {width:210px;height:260px;right:10%;bottom:30px;} .title-copy h1 {font-size:55px;} .codex-grid {grid-template-columns:repeat(2,1fr);} .forest-modal {padding:24px;} .game-footer {flex-wrap:wrap;padding:12px 16px 24px;} .item-name {font-size:9px;} .energy {font-size:21px;}}
 @media(prefers-reduced-motion:reduce) {.forest-game * {transition:none!important;} .hero>.forest-art {transform:none!important;}}
 @media(max-width:760px){.journey-panel{display:contents;}.route-panel{grid-row:1;}.inventory-panel{grid-row:2;}.ground-area{grid-row:3;}.game-columns>.notice{grid-row:4;}.travel-log{grid-row:5;}.battle-controls{top:8px;padding:12px;}.combat-steps{font-size:12px;}.route-panel .combat-hint{font-size:12px;}}
 

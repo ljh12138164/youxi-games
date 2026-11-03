@@ -4,9 +4,9 @@ import { act, adjacent, canPlace, expansionCells, key, newRun, power, routes, sh
 import { ITEMS, ENEMIES, EVENTS, ITEM_MAP } from '../src/content.ts';
 import { parseSave, validateSave } from '../src/storage.ts';
 
-test('40 件物品、15 类敌人、12 个事件：ID 唯一，形状四次旋转不变',()=>{
-  assert.equal(ITEMS.length,40);assert.equal(ENEMIES.length,15);assert.equal(EVENTS.length,12);
-  assert.equal(new Set(ITEMS.map(i=>i.id)).size,40);
+test('43 件物品、15 类敌人、12 个事件：ID 唯一，形状四次旋转不变',()=>{
+  assert.equal(ITEMS.length,43);assert.equal(ENEMIES.length,15);assert.equal(EVENTS.length,12);
+  assert.equal(new Set(ITEMS.map(i=>i.id)).size,43);
   for(const item of ITEMS){assert.deepEqual(shape(item.id,4),shape(item.id));assert.equal(new Set(shape(item.id).map(([x,y])=>key(x,y))).size,item.shape.length);}
 });
 test('越界与重叠放置无副作用，移动会改变真实伤害，同一邻居不重复计数',()=>{

@@ -14,6 +14,15 @@ export function validateSave(value:unknown):value is Run {
   if(r.hp===0&&r.phase!=='lost')return false;
   if(r.rescues!==undefined&&r.rescues!==0&&r.rescues!==1)return false;
   if(r.difficulty!==undefined&&!['easy','normal','hard'].includes(r.difficulty))return false;
+  if(r.ruleset!==undefined&&r.ruleset!==2)return false;
+  if(r.phase==='shop'&&r.ruleset===2&&!r.shop)return false;
+  if(r.shop!==undefined){
+    const s=r.shop;
+    if(!s||r.ruleset!==2||r.phase!=='shop'||!Array.isArray(s.kinds)||!Array.isArray(s.sold)||typeof s.refreshed!=='boolean')return false;
+    if(!Array.isArray(r.offers)||s.kinds.length!==r.offers.length||s.kinds.length+s.sold.length!==4||new Set(r.offers).size!==r.offers.length)return false;
+    if(s.kinds.some(k=>!['weapon','build','supply','any'].includes(k))||new Set(s.kinds).size!==s.kinds.length)return false;
+    if(new Set(s.sold).size!==s.sold.length||s.sold.some(id=>!ITEM_MAP[id]||r.offers.includes(id)))return false;
+  }
   if(!Array.isArray(r.bag)||r.bag.length>COLS*ROWS||new Set(r.bag).size!==r.bag.length||r.bag.some(c=>!/^([0-6]),([0-4])$/.test(c)))return false;
   if(!Array.isArray(r.items)||!Array.isArray(r.loot)||r.items.length+r.loot.length>100)return false;
   const ids=new Set<number>();
@@ -23,6 +32,8 @@ export function validateSave(value:unknown):value is Run {
   }
   if(r.items.some(i=>!canPlace(r,i,i.x,i.y,i.rotation)))return false;
   if(!Array.isArray(r.enemies)||r.enemies.length>10||r.enemies.some(e=>!e||!ENEMY_MAP[e.def]||![e.uid,e.hp,e.block,e.poison].every(n=>Number.isSafeInteger(n)&&n>=0)||ids.has(e.uid)))return false;
+  if(r.enemies.some(e=>e.broken!==undefined&&(r.ruleset!==2||!['elite1','boss1'].includes(e.def)||typeof e.broken!=='boolean')))return false;
+  if(r.enemies.some(e=>e.stageTurn!==undefined&&(r.ruleset!==2||e.def!=='boss3'||!Number.isSafeInteger(e.stageTurn)||e.stageTurn<2||e.stageTurn>r.turn+1)))return false;
   if(new Set(r.enemies.map(e=>e.uid)).size!==r.enemies.length||r.enemies.some(e=>e.uid<1||e.uid>=r.seq))return false;
   if(['prepare','battle'].includes(r.phase)&&!r.enemies.some(e=>e.hp>0))return false;
   if(!Array.isArray(r.offers)||r.offers.some(id=>!ITEM_MAP[id])||!Array.isArray(r.discoveries)||r.discoveries.some(id=>!ITEM_MAP[id]))return false;

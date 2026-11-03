@@ -1,18 +1,19 @@
-import atlas from './assets/forest-atlas.png';
+import atlas from './assets/actors-pixel-v1.png';
+import weapons from './assets/weapons-pixel-v1.png';
+import equipment from './assets/equipment-pixel-v1.png';
+import { ITEM_SPRITES } from './item-sprites.ts';
+import { ACTOR_SPRITES } from './actor-sprites.ts';
 import { useId, type CSSProperties } from 'react';
 
-// Atlas was generated with uneven internal padding; crop each sprite explicitly.
-const crops=[
-  [0,25,318,355],[325,35,310,350],[643,100,290,280],[930,0,350,382],
-  [75,392,195,303],[340,405,285,290],[690,405,190,290],[960,455,310,220],
-  [20,710,280,245],[350,698,270,260],[680,695,235,260],[995,700,270,250],
-  [20,955,290,315],[345,950,290,315],[680,960,250,290],[955,950,320,315],
-];
-export function Art({icon,className='',style}:{icon:number;className?:string;style?:CSSProperties}){
-  const [x,y,width,height]=crops[icon];
+export const artSources=[atlas,weapons,equipment];
+export function Art({item,actor='hero',className='',style}:{item?:string;actor?:string;className?:string;style?:CSSProperties}){
+  const sprite=item?ITEM_SPRITES[item]:undefined;
+  const index=sprite?sprite.index:ACTOR_SPRITES[actor];
+  const x=(index%4)*320,y=Math.floor(index/4)*320,width=320,height=320;
+  const src=sprite?(sprite.sheet==='weapons'?weapons:equipment):atlas;
   const clip=useId();
-  return <svg className={`forest-art ${className}`} style={style} viewBox={`${x} ${y} ${width} ${height}`} aria-hidden="true">
+  return <svg className={`forest-art ${className}`} style={style} viewBox={`${x} ${y} ${width} ${height}`} aria-hidden="true" data-sprite={sprite?`${sprite.sheet}:${sprite.index}`:undefined} data-actor={sprite?undefined:actor}>
     <defs><clipPath id={clip}><rect x={x} y={y} width={width} height={height}/></clipPath></defs>
-    <image clipPath={`url(#${clip})`} href={atlas} x="0" y="0" width="1280" height="1280"/>
+    <image clipPath={`url(#${clip})`} href={src} x="0" y="0" width="1280" height={sprite?sprite.rows*320:1280} preserveAspectRatio="none"/>
   </svg>;
 }
