@@ -21,7 +21,7 @@ async function click(frame,label){
   const point=await canvas.evaluate((canvas,label)=>{
     const hit=globalThis.__backpackGame.getHits().find(h=>h.enabled&&h.label===label);
     if(!hit)throw Error('Missing Canvas control: '+label);
-    const ratio=canvas.getBoundingClientRect().width/Math.max(360,Math.min(1120,innerWidth));
+    const ratio=canvas.getBoundingClientRect().width/Math.max(320,Math.min(1120,innerWidth));
     return {x:(hit.x+hit.w/2)*ratio,y:(hit.y+hit.h/2)*ratio};
   },label);
   await canvas.click({position:point});
