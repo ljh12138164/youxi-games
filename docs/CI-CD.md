@@ -43,7 +43,8 @@
 每项必须在 `gameId` 与 `create` 中二选一，不能同时提供。清单 key、slug、`games/<slug>/` 目录须一致。
 
 - `gameId`：绑定经核对的已有、已上架游戏，只更新文件。
-- `create`：首次创建的元数据。title、summary、instructions 必须有实际内容；devices 仅声明已支持的 desktop/mobile。categories 使用平台现有分类 UUID；coverId 引用平台已存在封面，或 null。当前流程不自动上传封面或创建分类。
+- `create`：首次创建的元数据。title、summary、instructions 必须有实际内容；devices 仅声明已支持的 desktop/mobile。categories 使用平台现有分类 UUID；coverId 引用平台已存在封面，或 null。不自动创建分类。
+- `coverSha256`（可选）：首次发布时上传 `games/<slug>/art/cover-publish.webp`，填写该文件的 SHA-256，并将 create.coverId 设为 null。`ci:games` 将封面复制到同一次 CI 产物的 `dist/covers/<slug>.webp`；部署在任何平台写入前核验摘要及 512000 字节上限。上传意图、会话和封面 UUID 持久保存在加密状态中，响应丢失可重放原请求。普通更新继续保留线上封面；修改已保存的封面摘要会停止发布，需另外核对资料变更。
 - `create` 内容只用于首次创建，后续不会据此改写线上资料。创建尚未完成时不要更改已保存的创建请求；需要修改时先恢复并核对对应对象。
 - 不把示例、仅有 roadmap 的游戏或未获授权上线的项目加入清单。当前实际清单以 `deploy/games.json` 为准。
 

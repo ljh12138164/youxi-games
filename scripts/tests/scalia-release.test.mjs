@@ -19,7 +19,8 @@ function fixture(t) {
   const registry = {};
   const games = new Map(), versions = new Map(), sessions = new Map(), candidates = new Map(), creates = new Map();
   const calls = [];
-  let loseCreate = false, failPublish = false, attempt = 0;
+  let loseCreate = false, loseCoverFinish = false, failPublish = false, attempt = 0;
+  const uploadKeys = new Map(), finishedUploads = new Map();
   const addPackage = (slug, body = '<html>new</html>', blocked = 0) => {
     const bytes = Buffer.from(body);
     const directory = join(root, 'dist', 'games', slug);
@@ -56,16 +57,25 @@ function fixture(t) {
     }
     if (action === 'get_game') return structuredClone(games.get(input.gameId));
     if (action === 'begin_upload') {
+      if (uploadKeys.has(key)) return { uploadId: uploadKeys.get(key) };
       assert.equal(games.get(input.gameId).draft.revision, input.expectedDraftRevision);
       const id = randomUUID();
-      sessions.set(id, { gameId: input.gameId, files: new Map() });
+      sessions.set(id, { gameId: input.gameId, kind: input.kind, files: new Map() });
+      uploadKeys.set(key, id);
       return { uploadId: id };
     }
     if (action === 'finish_upload') {
-      const game = games.get(sessions.get(input.uploadId).gameId);
+      if (finishedUploads.has(key)) return finishedUploads.get(key);
+      const session = sessions.get(input.uploadId);
+      const game = games.get(session.gameId);
       game.draft.revision++;
-      game.draft.artifactId = input.uploadId;
-      return { draftRevision: game.draft.revision };
+      if (session.kind === 'cover') game.draft.snapshot.coverId = randomUUID();
+      else game.draft.artifactId = input.uploadId;
+      const result = { draftRevision: game.draft.revision };
+      finishedUploads.set(key, result);
+      session.finished = true;
+      if (session.kind === 'cover' && loseCoverFinish) { loseCoverFinish = false; throw new Error('Cover finish response lost'); }
+      return result;
     }
     if (action === 'create_game_preview') {
       const game = games.get(input.gameId), id = randomUUID();
@@ -90,14 +100,55 @@ function fixture(t) {
   const run = async (isCurrentMain = async () => true, persistState) => {
     const report = { games: [] };
     await releaseGames({ registry, artifactRoot: root, statePath, repository: 'owner/repo', releaseId: `run-${++attempt}`,
-      api, uploadFile: async (id, file) => { sessions.get(id).files.set(file.path, file.bytes); },
+      api, uploadFile: async (id, file) => {
+        assert(!sessions.get(id).finished, 'cannot PUT a closed upload');
+        sessions.get(id).files.set(file.path, file.bytes);
+      },
       liveFile: async (game, path) => versions.get(game.currentVersionId).get(path) ?? null,
       isCurrentMain, report, persistState, log() {} });
     return report;
   };
   return { root, statePath, registry, games, calls, addPackage, seed, run,
-    loseCreate() { loseCreate = true; }, failPublish() { failPublish = true; } };
+    loseCreate() { loseCreate = true; }, loseCoverFinish() { loseCoverFinish = true; }, failPublish() { failPublish = true; } };
 }
+
+function addCover(f, bytes = Buffer.from('webp fixture')) {
+  mkdirSync(join(f.root, 'dist/covers'), { recursive: true });
+  writeFileSync(join(f.root, 'dist/covers/first.webp'), bytes);
+  f.registry.first.coverSha256 = createHash('sha256').update(bytes).digest('hex');
+}
+
+test('first-release cover survives lost finish response and publish failure without duplication', async t => {
+  const f = fixture(t);
+  f.registry.first = { slug: 'first', create: metadata };
+  f.addPackage('first');
+  addCover(f);
+  f.loseCoverFinish();
+  await assert.rejects(f.run(), /Cover finish response lost/);
+  const pending = JSON.parse(readFileSync(f.statePath)).bindings.first;
+  assert(pending.coverUpload.uploadId);
+  f.failPublish();
+  await assert.rejects(f.run(), /Publish unavailable/);
+  const coverId = JSON.parse(readFileSync(f.statePath)).bindings.first.coverId;
+  assert(coverId);
+  assert.equal((await f.run()).games[0].status, 'published');
+  assert.equal(f.games.get(pending.gameId).draft.snapshot.coverId, coverId);
+  assert.equal((await f.run()).games[0].status, 'unchanged');
+  assert.equal(f.calls.filter(call => call.action === 'begin_upload' && call.input.kind === 'cover').length, 1);
+  assert.equal(f.calls.filter(call => call.action === 'create_game').length, 1);
+});
+
+test('tampered or oversized cover stops all platform writes before creating a game', async t => {
+  const f = fixture(t);
+  f.registry.first = { slug: 'first', create: metadata };
+  f.addPackage('first');
+  addCover(f);
+  writeFileSync(join(f.root, 'dist/covers/first.webp'), 'tampered');
+  await assert.rejects(f.run(), /invalid release cover/);
+  addCover(f, Buffer.alloc(512001));
+  await assert.rejects(f.run(), /invalid release cover/);
+  assert.equal(f.calls.length, 0);
+});
 
 test('first release persists UUID, reruns skip unchanged and later packages update the same game', async t => {
   const f = fixture(t);

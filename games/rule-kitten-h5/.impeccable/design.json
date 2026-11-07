@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "name": "纸上规则",
+  "mode": "experience",
+  "tokens": {
+    "paper": "#f7edda",
+    "ink": "#204d43",
+    "muted": "#657265",
+    "property": "#be6040",
+    "grid": "#b3baa0",
+    "white": "#fff9ed"
+  },
+  "assets": ["src/assets/atlas-paper-v1.png"],
+  "compactDirectionTargetMinCssPx": 44,
+  "authority": "用户确认 A 纸上规则与橘白小猫；DESIGN.md"
+}

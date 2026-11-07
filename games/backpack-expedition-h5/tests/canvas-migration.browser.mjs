@@ -15,8 +15,8 @@ async function click(page,label,{touch=false,scroll=true}={}){
   }throw Error('Control not reachable: '+label+' '+JSON.stringify(await page.evaluate(()=>({state:__backpackGame.getState(),hits:__backpackGame.getHits()}))));
 }
 async function ready(page){await page.waitForFunction(()=>globalThis.__backpackGame?.getState().ready);}
-async function touchDrag(cdp,page,from,to,cancel=false){
-  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[from]});await page.waitForTimeout(450);
+async function touchDrag(cdp,page,from,to,cancel=false,hold=450){
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[from]});if(hold)await page.waitForTimeout(hold);
   for(let i=1;i<=6;i++){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:from.x+(to.x-from.x)*i/6,y:from.y+(to.y-from.y)*i/6}]});await page.waitForTimeout(16);}
   await cdp.send('Input.dispatchTouchEvent',{type:cancel?'touchCancel':'touchEnd',touchPoints:[]});
 }
@@ -29,6 +29,7 @@ async function fixture(page,phase,options={}){
     if(phase==='event')run=act(run,{type:'node',kind:'event'}).run;
     if(phase==='rest'){run.step=3;run=act(run,{type:'node',kind:'rest'}).run;}
     if(phase==='expand')run.phase='expand';
+    if(phase==='loot')run.phase='loot';
     if(options.run)Object.assign(run,options.run);
     localStorage.setItem(KEY,JSON.stringify(run));
   },{phase,options,KEY});
@@ -93,7 +94,7 @@ test('共享 Canvas：正常首战、旋转拖放、交换、地上物品、商�
     await fixture(mp,'shop');const cdp=await mobile.newCDPSession(mp);
     await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:300,y:680}]});
     for(let y=650;y>=250;y-=40){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:300,y}]});await mp.waitForTimeout(12);}
-    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert((await state(mp)).scroll>300);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert.equal((await state(mp)).scroll,0,'手机主界面固定，不再整页滚动');
     for(const viewport of [{width:320,height:640},{width:390,height:844},{width:660,height:844},{width:844,height:390}]){
       await mp.setViewportSize(viewport);await fixture(mp,'battle');await click(mp,'物品 嫩枝杖',{touch:true,scroll:false});await click(mp,'1 ',{touch:true,scroll:false});assert((await state(mp)).run.enemies.some(e=>e.hp<24));
       await click(mp,'物品 嫩枝杖',{touch:true});await click(mp,'详情',{touch:true});await click(mp,'关闭',{touch:true});assert.equal(await mp.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
@@ -130,19 +131,18 @@ test('抖音 TT 接口集成：同一游戏界面、原生触摸、独立存档�
     const itemsBefore=(await state(page)).run.items;
     await touchDrag(cdp,page,{x:staff.x+staff.w/2,y:staff.y+staff.h/2},{x:8,y:180},true);assert.deepEqual((await state(page)).run.items,itemsBefore,'系统取消触摸不得提交拖放');
     await touchDrag(cdp,page,{x:staff.x+staff.w/2,y:staff.y+staff.h/2},{x:8,y:180});assert.deepEqual((await state(page)).run.items,itemsBefore,'包外非法落点应保留全部物品');
-    // Keep holding at the viewport edge until the shared ground area comes into view.
+    // Ground and bag are now on the same screen: no edge scrolling or long hold required.
     const potion=(await hits(page)).find(h=>h.label==='物品 草药露'),pickup=point(page,potion);
     await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[pickup]});await page.waitForTimeout(450);
-    await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:pickup.x,y:748}]});
-    await page.waitForFunction(()=>{const g=__backpackGame.getState().ui.ground;return g.y>=128&&g.y+g.h<760;},null,{timeout:4000});assert((await state(page)).scroll>0);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:pickup.x+10,y:pickup.y+10}]});
+    await page.waitForFunction(()=>__backpackGame.getState().ui.ground.h>0);assert.equal((await state(page)).scroll,0);
     const drop=(await state(page)).ui.ground;await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:drop.x+drop.w/2,y:drop.y+drop.h/2}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-    assert((await state(page)).run.loot.some(i=>i.def==='potion'),'边缘滚动后能真实放到地上');
+    assert((await state(page)).run.loot.some(i=>i.def==='potion'),'同屏拖到地上');
     const takeBack=point(page,(await hits(page)).find(h=>h.label==='地上 草药露'));
-    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[takeBack]});await page.waitForTimeout(450);await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:takeBack.x,y:132}]});
-    await page.waitForFunction(()=>__backpackGame.getHits().some(h=>h.label==='格子 6,4'&&h.y>=148&&h.h>40),null,{timeout:4000});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[takeBack]});
     const back=point(page,(await hits(page)).find(h=>h.label==='格子 6,4'));await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[back]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
     assert.equal((await state(page)).run.loot.length,0);assert.equal((await state(page)).run.items.find(i=>i.def==='potion').x,5);
-    await click(page,'林间遭遇',{touch:true});await click(page,'开始战斗',{touch:true});
+    await click(page,'路线',{touch:true,scroll:false});await click(page,'林间遭遇',{touch:true,scroll:false});await click(page,'开始战斗',{touch:true});
     await click(page,'物品 嫩枝杖',{touch:true});await click(page,'1 ',{touch:true});const before=await state(page);assert(before.motion);assert(before.run.energy<3);
     await page.evaluate(()=>__ttHost.handlers.hide());const frozen=await state(page);await page.waitForTimeout(160);assert.equal((await state(page)).frame,frozen.frame);assert.deepEqual((await state(page)).motion,frozen.motion);assert(await page.evaluate(()=>__ttHost.audio.pauses>0));
     await page.evaluate(()=>__ttHost.handlers.show());await page.waitForTimeout(100);assert((await state(page)).frame>frozen.frame);
@@ -236,13 +236,58 @@ test('迁移动作：弓箭、举盾、药剂、进食、连续替换、失败�
     const equipment=[item('bow',1,0,0),item('arrows',2,2,0),item('shield',3,3,0),item('potion',4,5,0),item('bread',5,0,2),item('dagger',6,2,2)];
     const options={run:{seq:20,hp:20,items:equipment,enemies:[{uid:10,def:'boss1',hp:60,block:5,poison:0}]}};
     await fixture(page,'battle',options);await click(page,'物品 榆木弓');await click(page,'1 ');let current=await state(page);assert.equal(current.motion.def,'bow');assert.match(current.motion.result,/生命 -3.*护盾 -5/);assert.equal(current.run.enemies[0].hp,57);
-    await page.keyboard.press('Space');const frozen=await state(page);await page.waitForTimeout(180);assert.deepEqual((await state(page)).motion,frozen.motion);await click(page,'继续远征');await page.waitForTimeout(850);assert.equal((await state(page)).motion,null);assert.deepEqual((await state(page)).run,frozen.run);
+    await page.keyboard.press('Space');const frozen=await state(page);await page.waitForTimeout(180);assert.deepEqual((await state(page)).motion,frozen.motion);await click(page,'继续远征');await page.waitForFunction(()=>__backpackGame.getState().motion===null);assert.deepEqual((await state(page)).run,frozen.run);
     await click(page,'物品 榆木弓');await page.keyboard.press('Digit1');assert.equal((await state(page)).motion,null);assert.match((await state(page)).notice,/已经用过/);await click(page,'关闭提示');
     await fixture(page,'battle',options);await click(page,'物品 榆木弓');await click(page,'1 ');await click(page,'物品 橡木盾');assert.equal((await state(page)).motion.kind,'shield');assert.equal((await state(page)).run.block,7);
     await click(page,'物品 草药露');current=await state(page);assert.equal(current.motion.kind,'heal');assert.equal(current.run.hp,28);assert(!current.run.items.some(i=>i.uid===4));
     const energy=current.run.energy;await click(page,'物品 麦香面包');assert.equal((await state(page)).motion.kind,'food');assert.equal((await state(page)).run.energy,energy+1);
     await click(page,'物品 林间短刀');await click(page,'1 ');assert.equal((await state(page)).motion.def,'dagger');await page.screenshot({path:'reports/backpack-expedition-h5/migration-melee-motion.png'});
-    await fixture(page,'battle',{run:{seq:20,items:equipment,enemies:[{uid:10,def:'twig',hp:1,block:0,poison:0}]}});await click(page,'物品 林间短刀');await click(page,'1 ');current=await state(page);assert.equal(current.run.phase,'loot');assert.equal(current.motion.target,10);assert(!(await hits(page)).some(h=>h.label.startsWith('攻击 ')&&h.enabled));await page.waitForTimeout(850);assert.equal((await state(page)).motion,null);assert.deepEqual((await state(page)).run,current.run);
+    await fixture(page,'battle',{run:{seq:20,items:equipment,enemies:[{uid:10,def:'twig',hp:1,block:0,poison:0}]}});await click(page,'物品 林间短刀');await click(page,'1 ');current=await state(page);assert.equal(current.run.phase,'loot');assert.equal(current.motion.target,10);assert(!(await hits(page)).some(h=>h.label.startsWith('攻击 ')&&h.enabled));await page.waitForFunction(()=>__backpackGame.getState().motion===null);assert.deepEqual((await state(page)).run,current.run);
     const reduced=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'}),rp=await reduced.newPage();await rp.goto(url);await ready(rp);await fixture(rp,'battle',options);await click(rp,'物品 榆木弓',{scroll:false});await click(rp,'1 ',{scroll:false});const pixels=await rp.locator('canvas').screenshot();await rp.waitForTimeout(120);assert.deepEqual(await rp.locator('canvas').screenshot(),pixels,'减少动态效果保留结果提示而不播放位移和箭迹');await reduced.close();
+  }finally{await browser.close();await server.close();}
+});
+
+test('手机操作区：固定背包、商店换件购买、同屏直接拖放、地上分页与说明局部滚动',async()=>{
+  const server=await createServer({server:{host:'127.0.0.1',port:0,open:false}});await server.listen();const browser=await chromium.launch();
+  try{
+    const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true}),page=await context.newPage(),errors=[];
+    page.on('pageerror',e=>errors.push(e.message));await page.goto(server.resolvedUrls.local[0]+'games/backpack-expedition-h5/');await ready(page);
+    await page.setViewportSize({width:480,height:1066});await fixture(page,'prepare');
+    let controls=await hits(page),scene=controls.find(h=>h.label.startsWith('攻击 '));assert(scene.h>=240,'高屏将多余空间用于战场，而不是留在底部');
+    assert(controls.some(h=>h.label==='格子 7,5'&&h.h>=h.w-1));assert(controls.some(h=>h.label==='开始战斗'&&h.enabled));
+    await page.screenshot({path:'reports/backpack-expedition-h5/mobile-stage-prepare-480.png'});
+    await page.setViewportSize({width:390,height:844});
+    await fixture(page,'shop',{run:{offers:['potion','bread','key','forkblade']}});
+    const start=(await hits(page)).find(h=>h.label==='格子 1,1');
+    await click(page,'下件',{touch:true,scroll:false});assert((await state(page)).ui.text.includes('麦香面包'));
+    await click(page,'上件',{touch:true,scroll:false});await click(page,'购买 ·',{touch:true,scroll:false});
+    let current=await state(page);assert.equal(current.ui.panel.tab,'ground');const loot=current.run.loot.find(i=>i.def==='potion');assert(loot);
+    const cdp=await context.newCDPSession(page),source=point(page,(await hits(page)).find(h=>h.label==='地上 草药露')),destination=point(page,(await hits(page)).find(h=>h.label==='格子 6,4'));
+    await touchDrag(cdp,page,source,destination,false,0);current=await state(page);
+    assert.equal(current.run.items.find(i=>i.uid===loot.uid).x,5);assert.equal(current.run.items.find(i=>i.uid===loot.uid).y,3);assert.equal(current.run.loot.length,0);assert.equal(current.scroll,0);
+    assert.deepEqual((await hits(page)).find(h=>h.label==='格子 1,1'),start,'买物品与拖放时背包坐标保持固定');
+    await click(page,'物品 草药露',{touch:true,scroll:false});await click(page,'详情',{touch:true,scroll:false});assert.equal((await state(page)).screen,'item');await click(page,'关闭',{touch:true,scroll:false});
+    const packed=(await state(page)).run.items,from=point(page,(await hits(page)).find(h=>h.item===loot.uid));
+    await touchDrag(cdp,page,from,{x:8,y:180},true,0);assert.deepEqual((await state(page)).run.items,packed,'直接拖动收到取消事件时保留背包');
+    await fixture(page,'loot',{run:{seq:30,loot:Array.from({length:7},(_,i)=>item(i===6?'key':'potion',20+i,-1,-1))}});
+    assert.equal((await state(page)).ui.panel.tab,'ground');await click(page,'下页',{touch:true,scroll:false});await click(page,'下页',{touch:true,scroll:false});await click(page,'地上 黄铜钥匙',{touch:true,scroll:false});assert.equal((await state(page)).selected,26);assert.equal((await state(page)).scroll,0);
+    await page.screenshot({path:'reports/backpack-expedition-h5/mobile-ground-paged.png'});
+    for(const viewport of [{width:320,height:640},{width:390,height:844},{width:660,height:844}]){
+      await page.setViewportSize(viewport);
+      for(const phase of ['map','prepare','battle','shop','loot','event','rest','expand']){
+        await fixture(page,phase);current=await state(page);assert.equal(current.scroll,0);
+        const controls=await hits(page),last=controls.find(h=>h.label==='格子 7,5');assert(last&&last.h>=last.w-1&&last.y+last.h<viewport.height-60,`${phase}: 完整背包固定在操作栏之上`);
+        if(phase==='shop')assert(controls.some(h=>h.enabled&&h.label.startsWith('购买')&&h.h===44),'购买按钮不需滚动即可使用');
+        if(phase==='event')assert(controls.some(h=>h.label==='不打扰，继续走'&&h.h===44),'事件选择不需滚动');
+        if(phase==='rest')assert(controls.some(h=>h.label.startsWith('整理补给')&&h.h===44),'营地选择不需滚动');
+        await page.screenshot({path:`reports/backpack-expedition-h5/mobile-dock-${phase}-${viewport.width}.png`});
+      }
+    }
+    await page.setViewportSize({width:320,height:640});await fixture(page,'event');
+    const before=await state(page),bagBefore=(await hits(page)).find(h=>h.label==='格子 1,1'),panel=before.ui.panel;assert(panel.maxScroll>0);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:panel.x+40,y:panel.y+panel.h-12}]});
+    for(let i=1;i<=6;i++)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:panel.x+40,y:panel.y+panel.h-12-i*20}]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});current=await state(page);assert(current.ui.panel.scroll>0);assert.equal(current.scroll,0);assert.deepEqual(current.run,before.run);assert.deepEqual((await hits(page)).find(h=>h.label==='格子 1,1'),bagBefore);
+    await page.screenshot({path:'reports/backpack-expedition-h5/mobile-event-local-scroll.png'});assert.deepEqual(errors,[]);await context.close();
   }finally{await browser.close();await server.close();}
 });

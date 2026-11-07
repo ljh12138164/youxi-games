@@ -1,0 +1,7 @@
+@import '@shared/styles/tailwind.css';
+@source './';
+
+html, body { margin: 0; height: 100%; overflow: hidden; background: #f7f2e6; color: #34483e; font-family: sans-serif; }
+canvas { outline: none; -webkit-tap-highlight-color: transparent; }
+canvas:focus-visible { outline: 2px solid #42654e; outline-offset: -4px; }
+::selection { background: #edb94e; color: #34483e; }

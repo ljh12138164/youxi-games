@@ -67,7 +67,7 @@ export async function releaseGames({ registry, artifactRoot, statePath, reposito
   // Validate every registered package before any platform write, including creation.
   const plans = Object.entries(registry).map(([slug, target]) => {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 80 || target.slug !== slug
-        || Object.keys(target).some(key => !['slug', 'gameId', 'create'].includes(key))
+        || Object.keys(target).some(key => !['slug', 'gameId', 'create', 'coverSha256'].includes(key))
         || (Object.hasOwn(target, 'gameId') === Object.hasOwn(target, 'create'))) throw new Error('Invalid deployment registry');
     const initialSnapshot = Object.hasOwn(target, 'create') ? snapshot(target.create) : null;
     const binding = Object.hasOwn(state.bindings, slug) ? state.bindings[slug] : null;
@@ -75,9 +75,16 @@ export async function releaseGames({ registry, artifactRoot, statePath, reposito
     const id = target.gameId ?? binding?.gameId;
     if ((Object.hasOwn(target, 'gameId') && !uuid(target.gameId)) || (id && (!uuid(id) || ids.has(id)))) throw new Error('Invalid/duplicate deployment UUID');
     if (id) ids.add(id);
-    return { slug, target, initialSnapshot, ...checkedPackage(artifactRoot, slug) };
+    let cover = null;
+    if (Object.hasOwn(target, 'coverSha256')) {
+      cover = { path: 'cover.webp', bytes: readFileSync(join(artifactRoot, 'dist/covers', `${slug}.webp`)) };
+      if (!/^[a-f0-9]{64}$/.test(target.coverSha256) || cover.bytes.length > 512000 || !cover.bytes.length
+          || sha256(cover.bytes) !== target.coverSha256 || !initialSnapshot || initialSnapshot.coverId) throw new Error(`${slug}: invalid release cover`);
+      if (binding?.coverUpload && binding.coverUpload.digest !== target.coverSha256) throw new Error(`${slug}: saved cover intent changed`);
+    }
+    return { slug, target, initialSnapshot, cover, ...checkedPackage(artifactRoot, slug) };
   });
-  for (const { slug, target, initialSnapshot, files, artifactHash } of plans) {
+  for (const { slug, target, initialSnapshot, cover, files, artifactHash } of plans) {
     const result = { slug, artifactHash, status: 'pending' };
     report.games.push(result);
     let binding = Object.hasOwn(state.bindings, slug) ? state.bindings[slug] : null;
@@ -104,14 +111,39 @@ export async function releaseGames({ registry, artifactRoot, statePath, reposito
       result.created = true;
     }
     result.gameId = gameId;
-    const game = await api('get_game', { gameId });
+    let game = await api('get_game', { gameId });
     const firstRelease = !game.currentVersionId;
     if (game.id !== gameId || game.slug !== slug || (firstRelease
       ? !binding?.createInput || game.stateRevision !== 0 || game.availability !== 'disabled'
       : game.availability !== 'enabled')) throw new Error(`${slug}: unexpected game identity/availability; refusing to publish`);
+    if (firstRelease && !isDeepStrictEqual(initialSnapshot, binding.createInput.snapshot)) throw new Error(`${slug}: first-release metadata differs from saved create intent`);
+    if (firstRelease && cover && !binding.coverId) {
+      if (!await isCurrentMain()) throw new Error('New main commit arrived; refusing to upload a stale cover');
+      if (!binding.coverUpload) {
+        if (!isDeepStrictEqual(game.draft.snapshot, initialSnapshot)) throw new Error(`${slug}: unpublished metadata changes before cover upload`);
+        binding.coverUpload = { digest: target.coverSha256, key: `ci-cover-${randomUUID()}`,
+          input: { gameId, expectedDraftRevision: game.draft.revision, kind: 'cover', entry: cover.path } };
+        await saveState();
+      }
+      const intent = binding.coverUpload;
+      if (!intent.uploadId) {
+        intent.uploadId = (await api('begin_upload', intent.input, `${intent.key}-begin`)).uploadId;
+        await saveState();
+      }
+      // A lost finish response advances the draft. Replay finish without re-uploading a closed session.
+      if (game.draft.revision === intent.input.expectedDraftRevision) await uploadFile(intent.uploadId, cover);
+      const finished = await api('finish_upload', { uploadId: intent.uploadId }, `${intent.key}-finish`);
+      game = await api('get_game', { gameId });
+      if (game.id !== gameId || game.slug !== slug || game.currentVersionId || game.stateRevision !== 0 || game.availability !== 'disabled'
+          || !uuid(game.draft.snapshot.coverId) || game.draft.revision !== finished.draftRevision
+          || !isDeepStrictEqual(game.draft.snapshot, { ...initialSnapshot, coverId: game.draft.snapshot.coverId })) {
+        throw new Error(`${slug}: unexpected metadata after cover upload`);
+      }
+      binding.coverId = game.draft.snapshot.coverId;
+      await saveState();
+    }
     const current = game.versions.find(version => version.id === game.currentVersionId);
-    const expectedSnapshot = firstRelease ? binding.createInput.snapshot : current?.snapshot;
-    if (firstRelease && !isDeepStrictEqual(initialSnapshot, expectedSnapshot)) throw new Error(`${slug}: first-release metadata differs from saved create intent`);
+    const expectedSnapshot = firstRelease ? { ...binding.createInput.snapshot, ...(binding.coverId ? { coverId: binding.coverId } : {}) } : current?.snapshot;
     if (!expectedSnapshot || !isDeepStrictEqual(expectedSnapshot, game.draft.snapshot)) {
       throw new Error(`${slug}: unpublished metadata changes must be resolved before automatic file updates`);
     }

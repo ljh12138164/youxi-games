@@ -1,10 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, copyFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { discoverGames, projectRoot } from './games.mjs';
 
 // Local artifact checks only. This script has no platform credentials or write API.
 let failed = false;
+const registry = JSON.parse(readFileSync(resolve(projectRoot, 'deploy/games.json'), 'utf8'));
 for (const game of discoverGames()) {
   const build = spawnSync(process.execPath, ['scripts/build-game.mjs', game.slug], {
     cwd: projectRoot, stdio: 'inherit',
@@ -12,6 +13,10 @@ for (const game of discoverGames()) {
   if (build.status !== 0) {
     failed = true;
     continue;
+  }
+  if (registry[game.slug]?.coverSha256) {
+    mkdirSync(resolve(projectRoot, 'dist/covers'), { recursive: true });
+    copyFileSync(resolve(game.root, 'art/cover-publish.webp'), resolve(projectRoot, 'dist/covers', `${game.slug}.webp`));
   }
   const driver = resolve(game.root, 'tests/platform-driver.mjs');
   const test = spawnSync(process.execPath, [

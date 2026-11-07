@@ -31,6 +31,9 @@ jobs:
       - run: pnpm run build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm run test:backpack:canvas
+      - run: pnpm run test:kitten:canvas
+      - run: pnpm run build:game -- rule-kitten-h5
+      - run: node scripts/platform-selftest.mjs --dir dist/games/rule-kitten-h5 --driver games/rule-kitten-h5/tests/platform-driver.mjs --report reports/rule-kitten-h5/platform-selftest.json
       - run: node --test games/long-night-embers-h5/tests/*.browser.mjs
       - run: pnpm run ci:games
       - name: Save independent packages and verification reports
@@ -40,6 +43,7 @@ jobs:
           name: games-${{ github.sha }}
           path: |
             dist/games/
+            dist/covers/
             dist/douyin/
             reports/
           if-no-files-found: warn

@@ -1,4 +1,17 @@
 {
+  "rule-kitten-h5": {
+    "slug": "rule-kitten-h5",
+    "coverSha256": "f69deab5b4e087dd9cb93cbee85f65eeac2f8d3789604eeee6801cb65764c23d",
+    "create": {
+      "title": "文字世界",
+      "summary": "陪橘白小猫推动文字、改写规则，解开纸上世界的十八道谜题。",
+      "description": "纸上印章风格的规则解谜游戏。将文字排成「物体 是 性质」，即时改变小猫、石头、墙、旗子与水的行为。十二个入门关逐步学习拆改规则、同时控制多个对象和接力控制；六个挑战关组合沉没牺牲、跨岸运输与重新定义终点。支持本地自动存档、选关、提示和撤销，重来也能撤销。",
+      "instructions": "电脑使用方向键或 WASD 移动，Z 撤销，R 重来，Esc 暂停。手机可在棋盘滑动，也可点按或按住十字方向盘。推动文字组成横向或纵向的「物体 是 性质」改变规则；让你控制的对象接触具有「赢」性质的对象即可通关。走错可随时撤销，设置中可静音或减少动态效果。",
+      "devices": ["desktop", "mobile"],
+      "categories": [],
+      "coverId": null
+    }
+  },
   "card-realms-h5": {
     "slug": "card-realms-h5",
     "create": {

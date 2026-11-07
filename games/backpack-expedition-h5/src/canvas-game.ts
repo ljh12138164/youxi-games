@@ -9,7 +9,7 @@ const NODES:Record<NodeKind,string>={battle:'林间遭遇',elite:'守卫挑战',
 const C={bg:'#20291d',panel:'#172015',edge:'#7e9160',ink:'#f4e9cd',gold:'#b88b3f',paper:'#c0a674',dark:'#172015',red:'#914c36',green:'#647d42'};
 type Motion={def:string;kind:string;elapsed:number;result:string;target?:number};
 type Drag={uid:number;rotation:number;x:number;y:number;startX:number;startY:number;moved:boolean};
-type Press={x:number;y:number;startY:number;touch:boolean;hit?:GameHit;moved:boolean;scroll:number;held:number;tooltip:boolean};
+type Press={x:number;y:number;startY:number;touch:boolean;hit?:GameHit;moved:boolean;scroll:number;held:number;tooltip:boolean;tray:boolean};
 
 // Both delivery targets use this scene. Only input, storage, audio and host lifecycle differ.
 export function createBackpackGame(platform:GamePlatform){
@@ -22,15 +22,17 @@ export function createBackpackGame(platform:GamePlatform){
   let bag={x:16,y:0,cell:50},ground={x:0,y:0,w:0,h:0},loadedAssets=0,failed=false;
   let renderedText:string[]=[],neighbors:number[]=[],preview:GameSnapshot['ui']['preview']=null,tooltip:number|null=null,paper=false,tipScroll=0,maxTipScroll=0;
   let tooltipBounds:{x:number;y:number;w:number;h:number}|null=null,logOpen=false,tooltipHitStart=0;
+  let mobileTab:'route'|'ground'=run.phase==='loot'?'ground':'route',trayScroll=0,maxTrayScroll=0,offerIndex=0,groundPage=0;
+  let tray={x:0,y:0,w:0,h:0};
   const images:Record<string,HTMLImageElement>={},pauses=new Set<string>();
   try{muted=platform.storage.getItem((platform.saveKey??SAVE_KEY)+':muted')==='true';}catch{/* Optional preference. */}
   platform.sound.setUserMuted(muted);
-  function getState():GameSnapshot{return JSON.parse(JSON.stringify({running:started&&ready&&!pauses.size&&run.phase==='battle',frame,paused:[...pauses],started,ready,run,selected,rotation,screen,notice,motion,scroll,ui:{text:renderedText,neighbors,tooltip,tooltipBounds:tooltip?tooltipBounds:null,ground,focus:focusableHits()[focus]?.label??null,preview}}));}
+  function getState():GameSnapshot{return JSON.parse(JSON.stringify({running:started&&ready&&!pauses.size&&run.phase==='battle',frame,paused:[...pauses],started,ready,run,selected,rotation,screen,notice,motion,scroll,ui:{text:renderedText,neighbors,tooltip,tooltipBounds:tooltip?tooltipBounds:null,ground,focus:focusableHits()[focus]?.label??null,preview,panel:W<740&&started?{...tray,tab:mobileTab,scroll:trayScroll,maxScroll:maxTrayScroll}:null}}));}
   function syncPause(){platform.sound.setPaused(pauses.size>0);}
   function setPause(reason:string,active:boolean){if(active)pauses.add(reason);else pauses.delete(reason);if(active){drag=null;press=null;tooltip=null;}syncPause();draw();}
   function open(name:string|null){screen=name;modalScroll=0;focus=-1;tooltip=null;if(name)pauses.add('menu');else pauses.delete('menu');syncPause();drag=null;press=null;draw();}
   function save(){const result=store.writeSave(run);if(!result.ok)notice=result.error??'保存失败，请导出进度。';}
-  function replace(next:Run){run=next;selected=null;tooltip=null;drag=null;motion=null;scroll=0;save();draw();}
+  function replace(next:Run){run=next;selected=null;tooltip=null;drag=null;motion=null;scroll=0;trayScroll=0;mobileTab=run.phase==='loot'?'ground':'route';offerIndex=0;groundPage=0;save();draw();}
   function confirm(text:string,action:()=>void,label='确认'){confirmText=text;confirmAction=action;confirmLabel=label;open('confirm');}
   function toggleMute(){muted=!muted;platform.sound.setUserMuted(muted);try{platform.storage.setItem((platform.saveKey??SAVE_KEY)+':muted',String(muted));}catch{/* Optional preference. */}draw();}
   function openRestart(){difficulty=run.difficulty??'easy';open('restart');}
@@ -43,7 +45,8 @@ export function createBackpackGame(platform:GamePlatform){
       motion={def:item.def,kind:d.kind,elapsed:0,target:enemy?.uid,result:d.kind==='weapon'?`命中 · 生命 -${delta}${block?` · 护盾 -${block}`:''}`:d.kind==='shield'?`护盾 +${result.run.block-before.block}`:d.kind==='heal'?`生命 +${result.run.hp-before.hp}`:`能量 +${result.run.energy-before.energy}`};
     }else if(action.type!=='place')motion=null;
     const phase=run.phase;run=result.run;notice='';selected=action.type==='place'?action.uid:null;if(action.type==='place')rotation=action.rotation;tooltip=null;save();
-    if(phase!==run.phase)scroll=0;
+    if(phase!==run.phase){scroll=0;trayScroll=0;mobileTab=run.phase==='loot'?'ground':'route';offerIndex=0;groundPage=0;}
+    if(action.type==='buy'||action.type==='stash'){mobileTab='ground';trayScroll=0;groundPage=Math.floor((run.loot.length-1)/Math.max(2,Math.floor((W-24)/92)));}
     platform.sound.play(action.type==='use'?'hit':action.type==='place'?'move':action.type==='end'?'end':'reward');
     console.info('backpack-action',JSON.stringify({action:action.type,phase:run.phase,hp:run.hp,turn:run.turn,energy:run.energy,enemies:run.enemies.map(e=>({uid:e.uid,hp:e.hp}))}));draw();return true;
   }
@@ -110,10 +113,10 @@ export function createBackpackGame(platform:GamePlatform){
     const idle=platform.reducedMotion?0:[0,-2,0,1][Math.floor(frame/8)%4];
     const progress=motion?Math.min(1,Math.floor(motion.elapsed/90)*90/750):0,active=motion&&!platform.reducedMotion&&progress<.75;
     const ranged=!!motion?.def.includes('bow'),lunge=active&&motion?.kind==='weapon'&&!ranged?Math.sin(progress/.75*Math.PI)*12:0;
-    const actorSize=Math.min(h-40,w>=740?135:80),heroX=x+(w>=740?w*.13:8),actorY=y+h-actorSize-18;
+    const actorSize=Math.min(h-40,w>=740?135:Math.min(144,w*.3)),heroX=x+(w>=740?w*.13:8),actorY=y+h-actorSize-18;
     actor('hero',heroX+lunge,actorY+idle,actorSize,actorSize);
     healthBar(heroX,y+h-9,Math.min(110,actorSize+8),run.hp,run.maxHp);text(`${run.hp}/${run.maxHp}`,heroX+4,y+h-26);
-    const enemies=run.enemies.filter(e=>e.hp>0||motion?.target===e.uid),ew=Math.min(w>=740?155:100,(w-112)/Math.max(1,enemies.length));
+    const enemies=run.enemies.filter(e=>e.hp>0||motion?.target===e.uid),ew=Math.min(w>=740?155:144,(w-112)/Math.max(1,enemies.length));
     enemies.forEach((e,i)=>{
       const ex=x+w-ew*(enemies.length-i)-(w>=740?w*.12:8),dead=e.hp===0,target=motion?.target===e.uid&&active;
       ctx.save();if(dead&&!platform.reducedMotion)ctx.globalAlpha=1-progress;else if(target&&Math.floor(progress*16)%2)ctx.globalAlpha=.45;
@@ -154,7 +157,7 @@ export function createBackpackGame(platform:GamePlatform){
       ctx.save();ctx.beginPath();cellsOf(item).forEach(([a,b])=>ctx.rect(x+a*cell,y+b*cell,cell,cell));ctx.clip();
       if(selected===item.uid||plan?.some(i=>i.uid===item.uid)){ctx.fillStyle=plan?C.green:'#b1ba75';ctx.fillRect(ix,iy,iw*cell,ih*cell);}
       if(run.phase==='battle'&&item.used)ctx.globalAlpha=.6;
-      if(drag?.uid===item.uid&&(drag.moved||press?.touch))ctx.globalAlpha=.35;
+      if(drag?.uid===item.uid&&drag.moved)ctx.globalAlpha=.35;
       art(item,ix+3,iy+3,iw*cell-6,ih*cell-19);
       const bottomRow=Math.max(...cells.map(c=>c[1])),labelCol=Math.min(...cells.filter(c=>c[1]===bottomRow).map(c=>c[0]));
       const d=ITEM_MAP[item.def],label=d.kind==='weapon'?(item.def.includes('bow')?'弓':'武器'):({shield:'盾牌',heal:'药剂',food:'干粮',charm:'护符',armor:'护甲'} as Record<string,string>)[d.kind];
@@ -162,7 +165,15 @@ export function createBackpackGame(platform:GamePlatform){
       rect(lx,ly,Math.min(cell-6,measure(label)+8),17,C.panel,C.panel);text(label,lx+3,ly+1);
       if(run.phase==='battle'){rect(ix+2,iy+2,Math.min(50,iw*cell-4),16,C.panel);text(item.used?'已用':['armor','charm'].includes(d.kind)?'被动':`${d.cost} 能量`,ix+4,iy+3);}
       const border=selected===item.uid?'#fff0af':preview?.blocked.includes(item.uid)?'#eea187':plan?.some(i=>i.uid===item.uid)?'#fff0af':neighbors.includes(item.uid)?'#667c3d':run.phase==='battle'&&d.kind==='weapon'&&!item.used&&run.energy>=d.cost?'#d1b463':d.rarity===3?'#a9752f':d.rarity===2?'#627d48':'#8d784f';
-      ctx.strokeStyle=border;ctx.lineWidth=selected===item.uid||neighbors.includes(item.uid)?3:2;cellsOf(item).forEach(([a,b])=>ctx.strokeRect(x+a*cell+2,y+b*cell+2,cell-4,cell-4));
+      ctx.strokeStyle=border;ctx.lineWidth=selected===item.uid||neighbors.includes(item.uid)?3:2;
+      const occupied=new Set(cells.map(([a,b])=>key(a,b)));ctx.beginPath();
+      for(const [a,b]of cells){
+        const left=ix+a*cell+2,right=ix+(a+1)*cell-2,top=iy+b*cell+2,bottom=iy+(b+1)*cell-2;
+        if(!occupied.has(key(a,b-1))){ctx.moveTo(left,top);ctx.lineTo(right,top);}
+        if(!occupied.has(key(a,b+1))){ctx.moveTo(left,bottom);ctx.lineTo(right,bottom);}
+        if(!occupied.has(key(a-1,b))){ctx.moveTo(left,top);ctx.lineTo(left,bottom);}
+        if(!occupied.has(key(a+1,b))){ctx.moveTo(right,top);ctx.lineTo(right,bottom);}
+      }ctx.stroke();
       ctx.restore();
       cellsOf(item).forEach(([a,b])=>hit(`物品 ${ITEM_MAP[item.def].name}`,x+a*cell,y+b*cell,cell,cell,()=>select(item),true,item.uid));
     });
@@ -280,13 +291,94 @@ export function createBackpackGame(platform:GamePlatform){
   function footer(){
     dy=0;clipTop=0;clipBottom=H;
     const y=H-bottom-56;rect(0,y,W,56+bottom,C.panel);const item=selectedItem(),bw=W>=740?176:128,compact=W<480;
-    if(item)button(compact?'详情':`详情 · ${ITEM_MAP[item.def].name}`,12,y+6,compact?64:W-bw-40,()=>open('item'),true,false,44);
+    if(item)button(W<740?'详情':`详情 · ${ITEM_MAP[item.def].name}`,12,y+6,W<740?64:W-bw-40,()=>open('item'),true,false,44);
     else if(compact)text(`第 ${run.floor}/3 层`,12,y+21);
     else text(`第 ${run.floor}/3 层 · ${run.discoveries.length}/${ITEMS.length} 图鉴`,16,y+20);
-    if(compact&&run.phase==='battle'){text(`回合 ${run.turn}`,84,y+8);text(`◆ ${run.energy} 能量`,84,y+30);}
+    if(W<740&&item&&editable())button('旋转',84,y+6,64,rotate,!pauses.size);
+    else if(compact&&run.phase==='battle'){text(`回合 ${run.turn}`,84,y+8);text(`◆ ${run.energy} 能量`,84,y+30);}
     const action=run.phase==='prepare'?()=>commit({type:'start'}):run.phase==='battle'?()=>commit({type:'end'}):['shop','loot'].includes(run.phase)?()=>leave():null;
     if(action)button(run.phase==='prepare'?'开始战斗':run.phase==='battle'?'结束回合':'收好行囊，继续走',W-bw-16,y+6,bw,action,!pauses.size,true);
-    else if(editable()&&item)button('旋转选中物品',W-bw-16,y+6,bw,rotate,!pauses.size,true);
+    else if(editable()&&item){if(W<740)button('放到地上',W-bw-16,y+6,bw,()=>commit({type:'stash',uid:item.uid}),run.items.some(i=>i.uid===item.uid),true);else button('旋转选中物品',W-bw-16,y+6,bw,rotate,!pauses.size,true);}
+  }
+  function mobileGround(x:number,y:number,w:number,h:number){
+    const cols=Math.max(2,Math.floor(w/92)),pages=Math.max(1,Math.ceil(run.loot.length/cols)),cw=w/cols;
+    groundPage=Math.max(0,Math.min(pages-1,groundPage));ground={x,y,w,h:h-50};
+    rect(x,y,w,h-50,drag?.moved?'#465b33':'#2a3823');
+    if(!run.loot.length)paragraph('拖到这里暂放\n也可选中装备，点“放到地上”',x+12,y+14,w-24);
+    const cardH=Math.min(88,h-56);
+    run.loot.slice(groundPage*cols,(groundPage+1)*cols).forEach((item,i)=>{
+      const ix=x+i*cw,d=ITEM_MAP[item.def];rect(ix+3,y+3,cw-6,cardH,selected===item.uid?'#bfbc6c':'#d4bf91','#947d4a');
+      art({...item,rotation:selected===item.uid?rotation:item.rotation},ix+16,y+6,cw-32,cardH-25);text(fitText(d.name,cw-14),ix+7,y+cardH-18,14,true);
+      hit(`地上 ${d.name}`,ix+3,y+3,cw-6,cardH,()=>select(item),true,item.uid);
+    });
+    const by=y+h-44;
+    button('上页',x,by,52,()=>{groundPage--;draw();},groundPage>0);text(`${groundPage+1}/${pages}`,x+62,by+14);
+    const held=selectedItem(),inside=held&&run.items.some(i=>i.uid===held.uid);
+    button('放到地上',x+w-172,by,112,()=>{if(held)commit({type:'stash',uid:held.uid});},!!inside);
+    button('下页',x+w-52,by,52,()=>{groundPage++;draw();},groundPage<pages-1);
+  }
+  function mobileShop(x:number,y:number,w:number,h:number){
+    offerIndex=Math.max(0,Math.min(run.offers.length-1,offerIndex));const id=run.offers[offerIndex];
+    if(!id){paragraph('摊位已经售空，整理好物品再出发。',x+8,y+12,w-16);return;}
+    const d=ITEM_MAP[id];art({def:id,rotation:0},x,y+2,44,44);text(fitText(d.name,w-160),x+50,y+4,16);text(`${offerIndex+1}/${run.offers.length} · ${d.shape.length} 格 · ${d.cost} 能量`,x+50,y+27);
+    button('上件',x+w-104,y,48,()=>{offerIndex--;trayScroll=0;draw();},offerIndex>0);
+    button('下件',x+w-48,y,48,()=>{offerIndex++;trayScroll=0;draw();},offerIndex<run.offers.length-1);
+    const bodyTop=y+52,bodyBottom=y+h-50;ctx.save();ctx.beginPath();ctx.rect(x,bodyTop,w,bodyBottom-bodyTop);ctx.clip();clipTop=bodyTop;clipBottom=bodyBottom;dy=-trayScroll;ctx.translate(0,dy);
+    const end=paragraph(d.description,x+4,bodyTop,w-8,16);maxTrayScroll=Math.max(0,end-bodyBottom);ctx.restore();dy=0;clipTop=contentTop;clipBottom=contentBottom;
+    const refreshW=run.shop?92:0;
+    button(`购买 · ${priceOf(run,id)} 金币`,x,y+h-44,w-refreshW-(refreshW?8:0),()=>commit({type:'buy',def:id}),run.gold>=priceOf(run,id),true);
+    if(run.shop)button('换货 · 4',x+w-92,y+h-44,92,()=>confirm('只换未售商品，已买货位不补回。本店仅一次，可能出现相同商品。',()=>commit({type:'refresh'}),'确认换货 · 4 金币'),!run.shop.refreshed&&!!run.offers.length&&run.gold>=REFRESH_PRICE);
+  }
+  function mobileLayout(){
+    scroll=0;maxScroll=0;maxTrayScroll=0;ground={x:0,y:0,w:0,h:0};
+    const battle=run.phase==='battle',available=contentBottom-contentTop,margin=12;
+    const targets=battle?targetHeight(W-24)+30:0,reserve=battle?52:220;
+    const minimumScene=Math.min(100,Math.max(58,available*.13)),spare=available-minimumScene-targets-38-reserve-(W-24)/COLS*ROWS;
+    const sceneH=minimumScene+Math.max(0,Math.min(spare,Math.min(280,W*.6)-minimumScene));
+    const boardW=Math.min(W-24,Math.max(196,(available-sceneH-targets-38-reserve)*COLS/ROWS));
+    let y=contentTop;scene(0,y,W,sceneH);y+=sceneH+6;
+    if(battle)y=combatTargets(margin,y,W-24);
+    const bx=(W-boardW)/2;text(`林间行囊 · ${run.bag.length} 格`,bx,y,18);text(`◆ ${run.energy}`,bx+boardW-50,y+2);y+=26;
+    y=drawBag(bx,y,boardW)-12;
+    tray={x:margin,y,w:W-24,h:Math.max(0,contentBottom-y-4)};
+    if(battle){
+      const chosen=selectedItem();text(fitText(chosen?ITEM_MAP[chosen.def].name:'选择装备，安排这一回合',W-104),margin,y+6);button('战况',W-80,y,68,()=>open('battle-info'));
+      if(tray.h>=98){
+        const description=chosen?ITEM_MAP[chosen.def].description:'武器点选后攻击高亮敌人；盾牌、药剂和干粮点一下即可使用。';
+        ctx.save();ctx.beginPath();ctx.rect(margin,y+50,W-24,tray.h-50);ctx.clip();paragraph(description,margin,y+50,W-24,16);ctx.restore();
+      }return;
+    }
+    const tab=drag?.moved?'ground':mobileTab,tabW=(W-24-8)/2;
+    const label=({shop:'摊位',map:'路线',prepare:'遭遇',rest:'营地',event:'见闻',expand:'扩展',loot:'战利品',won:'旅途',lost:'旅途'} as Record<string,string>)[run.phase]??'旅途';
+    button(label,margin,y,tabW,()=>{mobileTab='route';trayScroll=0;draw();},true,tab==='route');
+    button(`地上 · ${run.loot.length}`,margin+tabW+8,y,tabW,()=>{mobileTab='ground';trayScroll=0;draw();},true,tab==='ground');y+=50;
+    tray={x:margin,y,w:W-24,h:Math.max(0,contentBottom-y-4)};
+    if(tab==='ground'){mobileGround(margin,y,W-24,tray.h);return;}
+    if(run.phase==='shop'){mobileShop(margin,y,W-24,tray.h);return;}
+    if(run.phase==='event'||run.phase==='rest'){
+      const event=run.phase==='event'?EVENTS[run.event]:null,bodyBottom=y+tray.h-104;
+      ctx.save();ctx.beginPath();ctx.rect(margin,y,W-24,bodyBottom-y);ctx.clip();clipTop=y;clipBottom=bodyBottom;dy=-trayScroll;ctx.translate(0,dy);
+      text(event?.name??'在树下歇一会儿',margin,y,24);
+      const end=paragraph(event?.text??'火还温着，刚好可以坐下来喘口气。',margin,y+34,W-24,16);maxTrayScroll=Math.max(0,end-bodyBottom);
+      ctx.restore();dy=0;clipTop=contentTop;clipBottom=contentBottom;
+      button(event?.action??'休息 · 恢复 12 点生命',margin,y+tray.h-96,W-24,()=>leave(event?{type:'event',accept:true}:{type:'rest',choice:'heal'}),true,true);
+      button(event?'不打扰，继续走':'整理补给 · 生命上限 +4',margin,y+tray.h-44,W-24,()=>leave(event?{type:'event',accept:false}:{type:'rest',choice:'grow'}));
+      if(maxTrayScroll){ctx.fillStyle=C.edge;ctx.fillRect(W-6,y,3,Math.max(12,bodyBottom-y));}return;
+    }
+    ctx.save();ctx.beginPath();ctx.rect(margin,y,W-24,tray.h);ctx.clip();clipTop=y;clipBottom=y+tray.h;dy=-trayScroll;ctx.translate(0,dy);
+    let end=y;
+    if(run.phase==='map'){
+      text(`第 ${run.floor} 层 · 下一站 ${run.step+1}/${stepsInFloor(run)}`,margin,y+4);end+=32;
+      const options=routes(run),bw=(W-24-(options.length-1)*8)/options.length;
+      options.forEach((kind,i)=>button(NODES[kind],margin+i*(bw+8),end,bw,()=>commit({type:'node',kind}),!run.loot.length,false,52));end+=60;
+      if(run.loot.length){button('放弃地上物品，继续选路',margin,end,W-24,()=>leave());end+=52;}
+    }else if(run.phase==='prepare'){
+      end=paragraph('先整理行囊，准备好后开始战斗。',margin,y,W-24)+8;
+      for(const enemy of run.enemies)end=paragraph(`${ENEMY_MAP[enemy.def].name} · ${intent(run,enemy).label}${encounterHint(run,enemy)?`\n${encounterHint(run,enemy)}`:''}`,margin,end,W-24)+8;
+    }else if(run.phase==='loot')end=paragraph('把地上战利品拖入背包，或点选后点格子放入。离开后剩余物品会丢失。',margin,y,W-24);
+    else end=routePanel(margin,y,W-24);
+    maxTrayScroll=Math.max(0,end-y-tray.h);ctx.restore();dy=0;clipTop=contentTop;clipBottom=contentBottom;
+    if(maxTrayScroll>0){const track=tray.h,thumb=Math.max(20,track*track/(track+maxTrayScroll));ctx.fillStyle=C.edge;ctx.fillRect(W-6,y+(track-thumb)*Math.min(1,trayScroll/maxTrayScroll),3,thumb);}
   }
   function difficultyButtons(x:number,y:number,w:number){
     const kinds=Object.keys(DIFFICULTIES) as Difficulty[];
@@ -314,8 +406,8 @@ export function createBackpackGame(platform:GamePlatform){
   }
   function modal(){
     ctx.fillStyle='#10190cf2';ctx.fillRect(0,0,W,H);hits=[];renderedText=[];dy=0;clipTop=0;clipBottom=H;
-    const w=Math.min(screen==='codex'?960:640,W-24),x=(W-w)/2,y=top+8,bodyTop=y+58,bodyBottom=H-bottom-16;
-    rect(x,y,w,bodyBottom-y,C.panel,'#b4a16b');text(({menu:'旅途菜单',help:'林间向导',saves:'把旅途存好',codex:'行囊里的见闻',restart:'重新出发',confirm:'出发前再确认',item:'物品详情',log:'沿途记录'} as Record<string,string>)[screen!]??'',x+16,y+20,24);
+    const w=Math.min(screen==='codex'?960:640,W-24),x=(W-w)/2,y=W<740&&['item','battle-info','log'].includes(screen!)?Math.max(top+8,H-bottom-Math.min(520,H*.7)):top+8,bodyTop=y+58,bodyBottom=H-bottom-16;
+    rect(x,y,w,bodyBottom-y,C.panel,'#b4a16b');text(({menu:'旅途菜单',help:'林间向导',saves:'把旅途存好',codex:'行囊里的见闻',restart:'重新出发',confirm:'出发前再确认',item:'物品详情',log:'沿途记录','battle-info':'战况与敌人'} as Record<string,string>)[screen!]??'',x+16,y+20,24);
     button('关闭',x+w-68,y+8,56,()=>open(null),true,false,40);
     ctx.save();ctx.beginPath();ctx.rect(x+10,bodyTop,w-20,bodyBottom-bodyTop-8);ctx.clip();dy=-modalScroll;clipTop=bodyTop;clipBottom=bodyBottom-8;ctx.translate(0,dy);
     let cy=bodyTop+8;const bx=x+16,bw=w-32;
@@ -325,7 +417,7 @@ export function createBackpackGame(platform:GamePlatform){
       row(muted?'声音关 · 点击开启':'声音开 · 点击静音',toggleMute);row('重新开始 / 更改难度',openRestart);row('暂停',()=>{open(null);setPause('manual',true);});
     }
     if(screen==='help'){
-      for(const value of ['摆放：电脑拖动，右键或 R 旋转；手机长按物品片刻即可拖动，直接滑动则滚动页面。也可以先选物品，再点目标格。拖到有物品的位置会先检查所有交换目标能否安置，不能放下就整体退回。','战斗：先点武器，再点敌人；盾牌、药剂、干粮点击即用。每回合 3 点基础能量，每件主动装备每回合最多使用一次。护符与护甲自动生效。','搭配：武器旁边的护符可以增加伤害；弓与同行箭束、钥匙配合。详情显示实际加成及条件。','防守：护盾抵挡普通攻击，下回合清除。中毒无视护盾，每回合结算后减少一层。看清敌人预告，为蓄力重击预留盾牌。','旅途：三层森林，每层八站（旧档保留原站数）。每两场战斗与层末守卫后可以扩一格背包。战利品、商店买到的物品先在地上，装好再走。',`${difficultyOf(run).name}难度：${difficultyOf(run).description}进度在每次行动后自动保存。`,`键盘：Tab 切换控件，Enter 确认，R 旋转，数字 1/2 选敌，空格暂停，Esc 取消选择或关闭菜单。`])cy=paragraph(value,bx,cy,bw)+16;
+      for(const value of ['摆放：电脑拖动，右键或 R 旋转；手机竖屏按住物品直接拖动，下方切换摊位、路线和地上物品，只有说明面板局部滚动。横屏可长按拖动。也可以先选物品，再点目标格。拖到有物品的位置会先检查所有交换目标能否安置，不能放下就整体退回。','战斗：先点武器，再点敌人；盾牌、药剂、干粮点击即用。每回合 3 点基础能量，每件主动装备每回合最多使用一次。护符与护甲自动生效。','搭配：武器旁边的护符可以增加伤害；弓与同行箭束、钥匙配合。详情显示实际加成及条件。','防守：护盾抵挡普通攻击，下回合清除。中毒无视护盾，每回合结算后减少一层。看清敌人预告，为蓄力重击预留盾牌。','旅途：三层森林，每层八站（旧档保留原站数）。每两场战斗与层末守卫后可以扩一格背包。战利品、商店买到的物品先在地上，装好再走。',`${difficultyOf(run).name}难度：${difficultyOf(run).description}进度在每次行动后自动保存。`,`键盘：Tab 切换控件，Enter 确认，R 旋转，数字 1/2 选敌，空格暂停，Esc 取消选择或关闭菜单。`])cy=paragraph(value,bx,cy,bw)+16;
     }
     if(screen==='saves'){
       cy=paragraph('进度只保存在当前设备，清理数据前请导出。两端使用相同存档格式，可以导出后在另一端导入；不会自动跨设备同步。',bx,cy,bw)+12;
@@ -358,6 +450,7 @@ export function createBackpackGame(platform:GamePlatform){
         }else if(run.phase==='battle'&&ITEM_MAP[item.def].kind==='weapon'){cy=paragraph(combatHint(),bx,cy,bw)+8;row('去选择敌人 ↑',showTargets);}
       }
     }
+    if(screen==='battle-info'){cy=routePanel(bx,cy,bw);row('沿途记录',()=>open('log'));}
     if(screen==='log')for(const line of run.log)cy=paragraph(line,bx,cy,bw)+16;
     if(notice)cy=paragraph(notice,bx,cy+8,bw)+8;
     maxModalScroll=Math.max(0,cy-bodyBottom+12);ctx.restore();dy=0;
@@ -370,6 +463,8 @@ export function createBackpackGame(platform:GamePlatform){
     header();contentTop=top+(W>=740?68:60);contentBottom=H-bottom-(started?60:0);clipTop=contentTop;clipBottom=contentBottom;
     if(!started){
       ctx.save();ctx.beginPath();ctx.rect(0,contentTop,W,contentBottom-contentTop);ctx.clip();dy=-scroll;ctx.translate(0,dy);maxScroll=Math.max(0,title()-contentBottom);ctx.restore();dy=0;
+    }else if(W<740){
+      mobileLayout();footer();
     }else{
       ctx.save();ctx.beginPath();ctx.rect(0,contentTop,W,contentBottom-contentTop);ctx.clip();dy=-scroll;ctx.translate(0,dy);
       const wide=W>=740,landscape=wide&&H<500;
@@ -390,7 +485,7 @@ export function createBackpackGame(platform:GamePlatform){
       else{sideY=routePanel(sideX,sideY+8,sideW);sideY=groundItems(sideX,sideY+8,sideW);sideY=travelLog(sideX,sideY,sideW);}
       maxScroll=Math.max(0,Math.max(y,sideY)+16-contentBottom);ctx.restore();dy=0;footer();
     }
-    if(drag&&(drag.moved||press?.touch)){const item=[...run.items,...run.loot].find(i=>i.uid===drag!.uid);if(item){const cells=shape(item.def,drag.rotation),w=(Math.max(...cells.map(c=>c[0]))+1)*bag.cell,h=(Math.max(...cells.map(c=>c[1]))+1)*bag.cell;ctx.globalAlpha=.8;art({...item,rotation:drag.rotation},drag.x-w/2,drag.y-h/2,w,h);ctx.globalAlpha=1;}}
+    if(drag?.moved){const item=[...run.items,...run.loot].find(i=>i.uid===drag!.uid);if(item){const cells=shape(item.def,drag.rotation),w=(Math.max(...cells.map(c=>c[0]))+1)*bag.cell,h=(Math.max(...cells.map(c=>c[1]))+1)*bag.cell;ctx.globalAlpha=.8;art({...item,rotation:drag.rotation},drag.x-w/2,drag.y-h/2,w,h);ctx.globalAlpha=1;}}
     if(pauses.has('manual')&&!screen){ctx.fillStyle='#10190cf2';ctx.fillRect(0,0,W,H);hits=[];text('歇一会儿，行囊还在。',24,H/2-50,24);button('继续远征',24,H/2+12,W-48,()=>setPause('manual',false),true,true);}
     if(tooltip&&!screen&&!pauses.size)drawTooltip();
     if(screen)modal();
@@ -400,7 +495,7 @@ export function createBackpackGame(platform:GamePlatform){
   }
   function resize(){
     const v=platform.viewport();W=Math.max(320,Math.min(1120,v.width));const cssScale=v.width/W;H=v.height/cssScale;top=v.top/cssScale;bottom=v.bottom/cssScale;scale=cssScale*v.dpr;
-    canvas.width=Math.round(v.width*v.dpr);canvas.height=Math.round(v.height*v.dpr);scroll=0;modalScroll=0;drag=null;press=null;draw();
+    canvas.width=Math.round(v.width*v.dpr);canvas.height=Math.round(v.height*v.dpr);scroll=0;modalScroll=0;trayScroll=0;drag=null;press=null;draw();
   }
   function dropPosition(d:Drag,item:Item){
     const y=bag.y-scroll,w=bag.cell*COLS,h=bag.cell*ROWS;if(d.x<bag.x||d.x>=bag.x+w||d.y<y||d.y>=y+h)return null;
@@ -417,21 +512,23 @@ export function createBackpackGame(platform:GamePlatform){
       const insideTooltip=tooltip!==null&&tooltipBounds!==null&&x>=tooltipBounds.x&&x<tooltipBounds.x+tooltipBounds.w&&y>=tooltipBounds.y&&y<tooltipBounds.y+tooltipBounds.h;
       if(tooltip!==null&&!insideTooltip){tooltip=null;draw();}
       const target=[...(insideTooltip?hits.slice(tooltipHitStart):hits)].reverse().find(h=>h.enabled&&x>=h.x&&x<h.x+h.w&&y>=h.y&&y<h.y+h.h);
-      press={x,y,startY:y,touch:event.touch,hit:target,moved:false,scroll:screen?modalScroll:insideTooltip?tipScroll:scroll,held:0,tooltip:insideTooltip};
-      if(target?.item&&!event.touch&&editable()&&!screen&&!pauses.size){const item=[...run.items,...run.loot].find(i=>i.uid===target.item)!;drag={uid:item.uid,rotation:selected===item.uid?rotation:item.rotation,x,y,startX:x,startY:y,moved:false};}
+      const insideTray=W<740&&started&&x>=tray.x&&x<tray.x+tray.w&&y>=tray.y&&y<tray.y+tray.h;
+      press={x,y,startY:y,touch:event.touch,hit:target,moved:false,scroll:screen?modalScroll:insideTooltip?tipScroll:insideTray?trayScroll:scroll,held:0,tooltip:insideTooltip,tray:insideTray};
+      if(target?.item&&(!event.touch||W<740)&&editable()&&!screen&&!pauses.size){const item=[...run.items,...run.loot].find(i=>i.uid===target.item)!;drag={uid:item.uid,rotation:selected===item.uid?rotation:item.rotation,x,y,startX:x,startY:y,moved:false};}
       draw();
     }else if(event.type==='move'&&press){
       if(Math.hypot(x-press.x,y-press.startY)>6)press.moved=true;
       if(drag){drag.x=x;drag.y=y;drag.moved=press.moved;if(drag.moved){selected=drag.uid;rotation=drag.rotation;tooltip=null;}draw();}
-      else if(press.touch&&press.moved){const amount=press.scroll+press.startY-y;if(screen)modalScroll=Math.max(0,Math.min(maxModalScroll,amount));else if(press.tooltip)tipScroll=Math.max(0,Math.min(maxTipScroll,amount));else scroll=Math.max(0,Math.min(maxScroll,amount));draw();}
+      else if(press.touch&&press.moved){const amount=press.scroll+press.startY-y;if(screen)modalScroll=Math.max(0,Math.min(maxModalScroll,amount));else if(press.tooltip)tipScroll=Math.max(0,Math.min(maxTipScroll,amount));else if(press.tray)trayScroll=Math.max(0,Math.min(maxTrayScroll,amount));else scroll=Math.max(0,Math.min(maxScroll,amount));draw();}
     }else if(event.type==='up'&&event.button===0&&press){
       const current=press,d=drag;press=null;drag=null;
       if(d?.moved){const item=[...run.items,...run.loot].find(i=>i.uid===d.uid),drop=item&&dropPosition(d,item);if(drop)commit({type:'place',uid:d.uid,...drop,rotation:d.rotation});else if(x>=ground.x&&x<ground.x+ground.w&&y>=ground.y&&y<ground.y+ground.h&&run.items.some(i=>i.uid===d.uid))commit({type:'stash',uid:d.uid});draw();}
-      else if(!current.moved&&current.hit&&x>=current.hit.x&&x<current.hit.x+current.hit.w&&y>=current.hit.y&&y<current.hit.y+current.hit.h){current.hit.tap();console.info('backpack-state',JSON.stringify(getState()));}
+      else if(!current.moved&&current.hit&&x>=current.hit.x&&x<current.hit.x+current.hit.w&&y>=current.hit.y&&y<current.hit.y+current.hit.h){current.hit.tap();}
       else draw();
+      console.info('backpack-state',JSON.stringify(getState()));
     }
   }
-  function wheel(delta:number,x?:number,y?:number){const ratio=W/platform.viewport().width,inside=tooltip&&tooltipBounds&&(x===undefined||y===undefined||x*ratio>=tooltipBounds.x&&x*ratio<tooltipBounds.x+tooltipBounds.w&&y*ratio>=tooltipBounds.y&&y*ratio<tooltipBounds.y+tooltipBounds.h);if(screen)modalScroll=Math.max(0,Math.min(maxModalScroll,modalScroll+delta));else if(inside)tipScroll=Math.max(0,Math.min(maxTipScroll,tipScroll+delta));else scroll=Math.max(0,Math.min(maxScroll,scroll+delta));draw();}
+  function wheel(delta:number,x?:number,y?:number){const ratio=W/platform.viewport().width,inside=tooltip&&tooltipBounds&&(x===undefined||y===undefined||x*ratio>=tooltipBounds.x&&x*ratio<tooltipBounds.x+tooltipBounds.w&&y*ratio>=tooltipBounds.y&&y*ratio<tooltipBounds.y+tooltipBounds.h),insideTray=x===undefined||y===undefined||x*ratio>=tray.x&&x*ratio<tray.x+tray.w&&y*ratio>=tray.y&&y*ratio<tray.y+tray.h;if(screen)modalScroll=Math.max(0,Math.min(maxModalScroll,modalScroll+delta));else if(inside)tipScroll=Math.max(0,Math.min(maxTipScroll,tipScroll+delta));else if(W<740&&started){if(insideTray)trayScroll=Math.max(0,Math.min(maxTrayScroll,trayScroll+delta));}else scroll=Math.max(0,Math.min(maxScroll,scroll+delta));draw();}
   function focusableHits(){return (tooltip&&!screen?hits.slice(tooltipHitStart):hits).filter(h=>h.enabled);}
   function keyboard(code:string,shift=false){
     if(['hidden','sidebar','boss','text-input'].some(reason=>pauses.has(reason)))return;
