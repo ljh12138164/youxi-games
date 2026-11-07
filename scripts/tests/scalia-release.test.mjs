@@ -150,6 +150,45 @@ test('tampered or oversized cover stops all platform writes before creating a ga
   assert.equal(f.calls.length, 0);
 });
 
+test('explicit cover replacement preserves metadata and UUID, survives lost responses and skips completed reruns', async t => {
+  const f = fixture(t);
+  f.registry.first = { slug: 'first', create: metadata };
+  f.addPackage('first'); addCover(f);
+  const initial = await f.run(), id = initial.games[0].gameId;
+  const original = structuredClone(f.games.get(id).draft.snapshot);
+  f.registry.first.expectedCoverId = original.coverId;
+  addCover(f, Buffer.from('landscape cover'));
+  f.loseCoverFinish();
+  await assert.rejects(f.run(), /Cover finish response lost/);
+  f.failPublish();
+  await assert.rejects(f.run(), /Publish unavailable/);
+  const after = await f.run();
+  assert.equal(after.games[0].gameId, id); assert.equal(after.games[0].status, 'published');
+  const updated = f.games.get(id).draft.snapshot;
+  assert.notEqual(updated.coverId, original.coverId);
+  assert.deepEqual(updated, { ...original, coverId: updated.coverId });
+  assert.equal((await f.run()).games[0].status, 'unchanged');
+  assert.equal(f.calls.filter(c => c.action === 'begin_upload' && c.input.kind === 'cover').length, 2);
+  assert.equal(f.calls.filter(c => c.action === 'create_game').length, 1);
+});
+
+test('cover replacement requires the exact previous cover and rejects unrelated draft edits before writes', async t => {
+  const f = fixture(t);
+  f.registry.first = { slug: 'first', create: metadata };
+  f.addPackage('first'); addCover(f); const first = await f.run(), id = first.games[0].gameId;
+  const original = structuredClone(f.games.get(id).draft.snapshot);
+  const writes = () => f.calls.filter(c => c.key).length;
+  const before = writes();
+  addCover(f, Buffer.from('landscape cover'));
+  await assert.rejects(f.run(), /saved cover intent changed/);
+  f.registry.first.expectedCoverId = randomUUID();
+  await assert.rejects(f.run(), /cover replacement conflicts/);
+  f.registry.first.expectedCoverId = original.coverId;
+  f.games.get(id).draft.snapshot.title = 'Owner draft';
+  await assert.rejects(f.run(), /unpublished metadata changes/);
+  assert.equal(writes(), before);
+});
+
 test('first release persists UUID, reruns skip unchanged and later packages update the same game', async t => {
   const f = fixture(t);
   const unrelated = f.seed('unrelated');

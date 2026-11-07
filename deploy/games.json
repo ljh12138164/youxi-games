@@ -1,7 +1,8 @@
 {
   "rule-kitten-h5": {
     "slug": "rule-kitten-h5",
-    "coverSha256": "f69deab5b4e087dd9cb93cbee85f65eeac2f8d3789604eeee6801cb65764c23d",
+    "coverSha256": "555b4d0a449003330558a0117007181cf7e0a3efeab16130e4c4b8999aecb80b",
+    "expectedCoverId": "71600419-98c8-4f60-b864-03c3e64fdec2",
     "create": {
       "title": "文字世界",
       "summary": "陪橘白小猫推动文字、改写规则，解开纸上世界的十八道谜题。",
