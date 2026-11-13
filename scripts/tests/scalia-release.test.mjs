@@ -49,7 +49,7 @@ function fixture(t) {
       assert(![...games.values()].some(game => game.slug === input.slug), 'server rejects duplicate slug');
       const id = randomUUID();
       games.set(id, { id, slug: input.slug, availability: 'disabled', stateRevision: 0, currentVersionId: null,
-        draft: { revision: 0, snapshot: structuredClone(input.snapshot) }, versions: [] });
+        draft: { revision: 0, snapshot: { leaderboards: [], ...structuredClone(input.snapshot) } }, versions: [] });
       const output = { gameId: id };
       creates.set(key, { input: structuredClone(input), output });
       if (loseCreate) { loseCreate = false; throw new Error('Create response lost'); }
@@ -136,6 +136,19 @@ test('first-release cover survives lost finish response and publish failure with
   assert.equal((await f.run()).games[0].status, 'unchanged');
   assert.equal(f.calls.filter(call => call.action === 'begin_upload' && call.input.kind === 'cover').length, 1);
   assert.equal(f.calls.filter(call => call.action === 'create_game').length, 1);
+});
+
+test('a saved first-release intent still rejects a configured leaderboard', async t => {
+  const f = fixture(t);
+  f.registry.first = { slug: 'first', create: metadata };
+  f.addPackage('first');
+  addCover(f);
+  f.loseCreate();
+  await assert.rejects(f.run(), /Create response lost/);
+  const [game] = f.games.values();
+  game.draft.snapshot.leaderboards = [{ key: 'score', title: 'Score', scoreOrder: 'high' }];
+  await assert.rejects(f.run(), /unpublished metadata changes before cover upload \(leaderboards\)/);
+  assert.equal(f.calls.filter(call => call.action === 'begin_upload').length, 0);
 });
 
 test('tampered or oversized cover stops all platform writes before creating a game', async t => {

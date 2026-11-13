@@ -6,6 +6,11 @@ import { isDeepStrictEqual } from 'node:util';
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
+// The API adds an empty leaderboard list to snapshots. Existing create intents omit it.
+function sameSnapshot(left, right) {
+  return left && right && isDeepStrictEqual({ leaderboards: [], ...left }, { leaderboards: [], ...right });
+}
+
 function snapshot(input) {
   const limits = { title: 100, summary: 500, description: 10000, instructions: 5000 };
   const value = { description: '', instructions: '', categories: [], coverId: null, ...input };
@@ -127,7 +132,11 @@ export async function releaseGames({ registry, artifactRoot, statePath, reposito
     if ((firstRelease && cover && !binding.coverId) || replaceCover) {
       if (!await isCurrentMain()) throw new Error('New main commit arrived; refusing to upload a stale cover');
       if (!binding?.coverUpload || binding.coverUpload.digest !== target.coverSha256) {
-        if (!expectedSnapshot || !isDeepStrictEqual(game.draft.snapshot, expectedSnapshot)) throw new Error(`${slug}: unpublished metadata changes before cover upload`);
+        if (!sameSnapshot(game.draft.snapshot, expectedSnapshot)) {
+          const changed = Object.keys({ ...expectedSnapshot, ...game.draft.snapshot }).filter(field =>
+            !isDeepStrictEqual(game.draft.snapshot?.[field], expectedSnapshot?.[field]));
+          throw new Error(`${slug}: unpublished metadata changes before cover upload (${changed.join(', ')})`);
+        }
         if (replaceCover && (current.snapshot.coverId !== target.expectedCoverId
             || (binding?.coverUpload && binding.coverId !== current.snapshot.coverId))) throw new Error(`${slug}: cover replacement conflicts with current cover or pending intent`);
         binding ??= { gameId };
@@ -140,7 +149,7 @@ export async function releaseGames({ registry, artifactRoot, statePath, reposito
       }
       const intent = binding.coverUpload;
       const base = intent.baseSnapshot ?? initialSnapshot, revision = intent.baseStateRevision ?? 0;
-      if (game.stateRevision !== revision || !isDeepStrictEqual(firstRelease ? initialSnapshot : current?.snapshot, base)
+      if (game.stateRevision !== revision || !sameSnapshot(firstRelease ? initialSnapshot : current?.snapshot, base)
           || (replaceCover && base.coverId !== target.expectedCoverId)) throw new Error(`${slug}: saved cover intent conflicts with published metadata`);
       if (!binding.coverId) {
         if (!intent.uploadId) {
@@ -155,7 +164,7 @@ export async function releaseGames({ registry, artifactRoot, statePath, reposito
         if (game.id !== gameId || game.slug !== slug || game.currentVersionId !== previousVersionId || game.stateRevision !== revision
             || game.availability !== (firstRelease ? 'disabled' : 'enabled') || !uuid(game.draft.snapshot.coverId)
             || game.draft.revision !== finished.draftRevision
-            || !isDeepStrictEqual(game.draft.snapshot, { ...base, coverId: game.draft.snapshot.coverId })) {
+            || !sameSnapshot(game.draft.snapshot, { ...base, coverId: game.draft.snapshot.coverId })) {
           throw new Error(`${slug}: unexpected metadata after cover upload`);
         }
         binding.coverId = game.draft.snapshot.coverId;
@@ -163,7 +172,7 @@ export async function releaseGames({ registry, artifactRoot, statePath, reposito
       }
       expectedSnapshot = { ...base, coverId: binding.coverId };
     }
-    if (!expectedSnapshot || !isDeepStrictEqual(expectedSnapshot, game.draft.snapshot)) {
+    if (!sameSnapshot(expectedSnapshot, game.draft.snapshot)) {
       throw new Error(`${slug}: unpublished metadata changes must be resolved before automatic file updates`);
     }
     result.previousVersionId = game.currentVersionId;
@@ -182,7 +191,7 @@ export async function releaseGames({ registry, artifactRoot, statePath, reposito
     for (const file of files) await uploadFile(upload.uploadId, file);
     const finished = await api('finish_upload', { uploadId: upload.uploadId }, key('finish'));
     const candidate = await api('create_game_preview', { gameId, expectedDraftRevision: finished.draftRevision }, key('preview'));
-    if (!isDeepStrictEqual(candidate.snapshot, expectedSnapshot) || candidate.baseStateRevision !== game.stateRevision) {
+    if (!sameSnapshot(candidate.snapshot, expectedSnapshot) || candidate.baseStateRevision !== game.stateRevision) {
       throw new Error(`${slug}: candidate changed metadata/state; refusing to publish`);
     }
     if (!await isCurrentMain()) throw new Error('New main commit arrived; candidate retained without publishing');
