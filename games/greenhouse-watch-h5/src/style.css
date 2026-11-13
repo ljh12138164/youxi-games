@@ -1,0 +1,112 @@
+@import '@shared/styles/tailwind.css';
+@source './';
+
+:root {
+  font-family: "Microsoft YaHei", system-ui, sans-serif;
+  color-scheme: dark;
+  color: #f2f5e8;
+  background: #101810;
+}
+
+body { margin: 0; }
+
+button {
+  @apply relative inline-flex items-center rounded-md px-4 py-2 font-semibold;
+  border: 1px solid #9bbb79;
+  background: #b9db92;
+  color: #182713;
+  cursor: pointer;
+}
+
+[hidden] { display: none !important; }
+button:disabled { opacity: 0.55; cursor: default; }
+a { color: #d2efaf; }
+:focus-visible { outline: 3px solid #f0d994; outline-offset: 3px; }
+
+.trainer {
+  box-sizing: border-box;
+  width: min(calc(100% - 1.5rem), 30rem);
+  max-height: calc(100dvh - 1.5rem);
+  overflow: auto;
+  margin: auto;
+  padding: clamp(1rem, 4vw, 1.65rem);
+  border: 3px solid #7e8461;
+  border-radius: 14px 20px 12px 16px;
+  color: #fff2c9;
+  background: #283222;
+  box-shadow: 0 10px 26px #111b12c4, inset 0 2px 4px #c4be8666;
+}
+
+.trainer::backdrop { background: #111b14be; }
+.trainer-header { @apply flex items-center justify-between gap-3; }
+.trainer h2 { margin: 0; font-size: 1.65rem; }
+.trainer form { margin: 0; }
+select, .trainer-settings input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: .35rem .5rem;
+  border: 1px solid #a2ac81;
+  border-radius: .35rem;
+  color: #fff2c9;
+  background: #192315;
+  font: inherit;
+}
+.trainer .trainer-settings { @apply mt-3 grid gap-2 border-t border-[#7e8461] pt-3; }
+.trainer-settings label { @apply grid gap-1; }
+.trainer-settings p { font-size: .875rem; }
+.trainer-fields { @apply grid grid-cols-2 gap-2; }
+.trainer-actions { @apply flex flex-wrap gap-2; }
+.trainer-settings > button { justify-self: start; }
+.trainer-speed { @apply flex items-center gap-3 py-3; }
+.trainer-speed select, #language-form select { width: auto; }
+#trainer-status { margin: .7rem 0 0; }
+#trainer-status:empty { margin: 0; }
+
+.game:not([hidden]) {
+  @apply grid justify-items-center;
+  --game-width: min(100vw, calc((100dvh - 3rem) * 4 / 3), 1200px);
+  align-content: center;
+  min-height: 100dvh;
+  background: #070b07;
+}
+
+.toolbar {
+  @apply flex flex-wrap items-center justify-end gap-2 px-2 py-1;
+  box-sizing: border-box;
+  width: var(--game-width, 100vw);
+  font-size: 0.85rem;
+}
+
+.toolbar button { padding: 0.25rem 0.7rem; }
+.battlefield { position: relative; width: var(--game-width); }
+#identity { margin-inline-end: auto; }
+#canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+  background: #000;
+}
+#game-loading {
+  @apply absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 text-center;
+  background: #101810;
+}
+
+#pvz-soft-keyboard {
+  position: fixed;
+  inset: 0 auto auto 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.engine-license {
+  padding: .4rem .75rem;
+  background: #192618e8;
+  font-size: .78rem;
+}
+.engine-license a { margin-inline-end: .35rem; }
+#language-form { @apply flex flex-wrap items-center gap-2 py-2; }
+

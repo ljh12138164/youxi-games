@@ -61,5 +61,18 @@
       "categories": [],
       "coverId": null
     }
+  },
+  "greenhouse-watch-h5": {
+    "slug": "greenhouse-watch-h5",
+    "coverSha256": "913759463384736508075f5dda49b4143523aa033159925a49b27d66234f6896",
+    "create": {
+      "title": "植物大战僵尸",
+      "summary": "收集阳光、种下植物，挡住从草坪另一端走来的僵尸。",
+      "description": "社区重制的网页塔防游戏。冒险模式有 50 关，另有小游戏、解谜和生存模式。白天、夜晚、泳池和屋顶各有不同的布阵条件。支持简体中文和英文，游戏进度保存在当前浏览器。",
+      "instructions": "用鼠标点击阳光收集，再点选种子卡片和草坪格子种下植物。选中铲子后点击植物可以移除它。可用工具栏暂停游戏，或保存并返回标题。",
+      "devices": ["desktop"],
+      "categories": [],
+      "coverId": null
+    }
   }
 }

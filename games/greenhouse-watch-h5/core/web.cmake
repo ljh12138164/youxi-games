@@ -1,0 +1,11 @@
+function(attach_web_host)
+  get_target_property(web_link_options pvz-portable LINK_OPTIONS)
+  list(FILTER web_link_options EXCLUDE REGEX "EXPORTED_RUNTIME_METHODS")
+  set_property(TARGET pvz-portable PROPERTY LINK_OPTIONS "${web_link_options}")
+  target_sources(pvz-portable PRIVATE "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/web-bridge.cpp")
+  target_link_options(pvz-portable PRIVATE "SHELL:-sEXPORTED_RUNTIME_METHODS=FS,IDBFS,callMain")
+endfunction()
+
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+  cmake_language(DEFER CALL attach_web_host)
+endif()

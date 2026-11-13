@@ -14,6 +14,7 @@
     "lint": "oxlint",
     "build": "pnpm run typecheck && vite build",
     "build:game": "pnpm run typecheck && node scripts/build-game.mjs",
+    "build:greenhouse:wasm": "node games/greenhouse-watch-h5/core/build.mjs",
     "build:backpack:douyin": "pnpm run typecheck && node games/backpack-expedition-h5/douyin/build.mjs",
     "build:town:douyin": "pnpm run typecheck && node games/town-delivery-h5/douyin/build.mjs",
     "build:kitten:douyin": "pnpm run typecheck && node games/rule-kitten-h5/douyin/build.mjs",

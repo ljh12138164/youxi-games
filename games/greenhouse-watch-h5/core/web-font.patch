@@ -1,0 +1,43 @@
+diff --git a/src/SexyAppFramework/graphics/ImageFont.cpp b/src/SexyAppFramework/graphics/ImageFont.cpp
+index e5b4abd..fdcb93a 100644
+--- a/src/SexyAppFramework/graphics/ImageFont.cpp
++++ b/src/SexyAppFramework/graphics/ImageFont.cpp
+@@ -35,6 +35,9 @@
+ 
+ using namespace Sexy;
+ 
++int greenhouse_glyph_width(char32_t character, int ascent);
++bool greenhouse_draw_glyph(Graphics* graphics, char32_t character, const Rect& dest, const Color& color);
++
+ DataElement::DataElement() :
+ 	mIsList(false)
+ {
+@@ -1359,6 +1362,8 @@ int ImageFont::StringWidth(std::string_view theString)
+ int ImageFont::CharWidthKern(char32_t theChar, char32_t thePrevChar)
+ {
+ 	Prepare();
++	if (int width = greenhouse_glyph_width(theChar, mAscent))
++		return width;
+ 
+ 	int aMaxXPos = 0;
+ 	double aPointSize = mPointSize * mScale;
+@@ -1468,6 +1473,19 @@ void ImageFont::DrawStringEx(Graphics* g, int theX, int theY, std::string_view t
+ 	{
+ 		bool aHasNext = UTF8DecodeNext(theString, aDecodeOffset, aNextRawChar);
+ 
++		if (int width = greenhouse_glyph_width(aCurRawChar, mAscent))
++		{
++			Rect dest(aCurXPos, theY - width, width, width);
++			if (greenhouse_draw_glyph(g, aCurRawChar, dest, theColor))
++			{
++				if (theDrawnAreas != nullptr)
++					theDrawnAreas->push_back(dest);
++				aCurXPos += width;
++				aCurRawChar = aNextRawChar;
++				aHasCur = aHasNext;
++				continue;
++			}
++		}
+ 		char32_t aChar = GetMappedChar(aCurRawChar);
+ 
+ 		char32_t aNextChar = aHasNext ? GetMappedChar(aNextRawChar) : 0;

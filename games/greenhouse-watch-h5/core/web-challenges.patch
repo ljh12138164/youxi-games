@@ -1,0 +1,19 @@
+diff --git a/src/Lawn/Widget/ChallengeScreen.cpp b/src/Lawn/Widget/ChallengeScreen.cpp
+--- a/src/Lawn/Widget/ChallengeScreen.cpp
++++ b/src/Lawn/Widget/ChallengeScreen.cpp
+@@ -254,4 +254,8 @@
++bool greenhouse_challenges_unlocked();
++
+ int ChallengeScreen::MoreTrophiesNeeded(int theChallengeIndex)
+ {
++	if (greenhouse_challenges_unlocked())
++		return 0;
+ 	const ChallengeDefinition& aDef = GetChallengeDefinition(theChallengeIndex);
+ 	if (mApp->mGameMode == GAMEMODE_UPSELL && mApp->mGameScene == SCENE_LEVEL_INTRO)
+@@ -384,4 +388,6 @@
+ int ChallengeScreen::AccomplishmentsNeeded(int theChallengeIndex)
+ {
++	if (greenhouse_challenges_unlocked())
++		return 0;
+ 	int aTrophiesNeeded = MoreTrophiesNeeded(theChallengeIndex);
+ 	GameMode aGameMode = GetChallengeDefinition(theChallengeIndex).mChallengeMode;

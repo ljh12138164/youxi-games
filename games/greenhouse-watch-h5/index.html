@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>植物大战僵尸</title>
+  </head>
+  <body>
+    <main>
+      <dialog id="trainer" class="trainer" aria-labelledby="trainer-title">
+        <header class="trainer-header">
+          <h2 id="trainer-title">修改器</h2>
+          <form method="dialog"><button type="submit">关闭</button></form>
+        </header>
+        <label class="trainer-speed">倍速
+          <select id="game-speed">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+            <option value="3">3×</option>
+          </select>
+        </label>
+        <div id="live-trainer"><button id="add-sun" type="button" disabled>增加 100 阳光</button></div>
+        <form id="trainer-profile" class="trainer-settings">
+          <label>金币总额（10 的倍数）
+            <input id="trainer-coins" type="number" min="0" max="999990" step="10" value="0" required>
+          </label>
+          <div class="trainer-actions">
+            <button id="set-coins" type="submit" disabled>设置金币</button>
+            <button id="unlock-levels" type="button" disabled>解锁附加模式</button>
+          </div>
+        </form>
+        <form id="trainer-level-form" class="trainer-settings">
+          <div class="trainer-fields">
+            <label>冒险关卡（1–50）
+              <input id="trainer-level" type="number" min="1" max="50" value="1" required>
+            </label>
+            <label>额外开局阳光
+              <input id="trainer-sun" type="number" min="0" max="1000" value="0" required>
+            </label>
+          </div>
+          <p id="trainer-level-hint">跳关会替换当前档案的冒险对局。</p>
+          <button id="jump-level" type="submit" disabled>开始指定关卡</button>
+        </form>
+        <p id="trainer-status" role="status"></p>
+      </dialog>
+      <section id="game" class="game" aria-label="植物大战僵尸">
+        <div class="toolbar">
+          <span id="identity"></span>
+          <span id="save-status" role="status"></span>
+          <button id="pause" type="button" aria-pressed="false" disabled>暂停</button>
+          <button id="game-trainer" type="button" disabled>修改器</button>
+          <button id="exit" type="button" disabled>保存并返回标题</button>
+        </div>
+        <div class="battlefield" id="canvas-container">
+          <canvas id="canvas" width="800" height="600" tabindex="0" aria-label="庭院战场"></canvas>
+          <div id="game-loading">
+            <p id="load-status" role="status">正在加载游戏…</p>
+            <button id="retry" type="button" hidden>重试</button>
+          </div>
+        </div>
+      </section>
+      <textarea id="pvz-soft-keyboard" autocapitalize="off" autocomplete="off" spellcheck="false" enterkeyhint="done" aria-label="游戏文字输入"></textarea>
+      <details class="engine-license">
+        <summary>游戏语言与许可</summary>
+        <form id="language-form">
+          <label>游戏内语言
+            <select id="game-language">
+              <option value="auto">跟随浏览器</option>
+              <option value="zh-CN">简体中文</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <button id="apply-language" type="submit" disabled>应用并返回标题</button>
+        </form>
+        <a href="https://github.com/wszqkzqk/PvZ-Portable/tree/25102237612a82cbe0282d5a8c5db406d029e647">战斗核心源码</a>
+        <a href="https://github.com/OpenMPT/openmpt/tree/327204eaa2c27bd1acbb571babe68f279c85238b">音频库源码</a>
+        <a id="license-lgpl">LGPL 3.0</a> · <a id="license-gpl">GPL 3.0</a> · <a id="license-framework">框架许可</a> · <a id="license-audio">音频库许可</a>
+        · <a id="license-font">字体许可</a>
+      </details>
+    </main>
+    <script type="module" src="./src/full-game.ts"></script>
+  </body>
+</html>
