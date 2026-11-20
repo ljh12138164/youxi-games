@@ -179,7 +179,7 @@ export async function releaseGames({ registry, artifactRoot, statePath, reposito
     let unchanged = !firstRelease && !replaceCover;
     if (!firstRelease) {
       for (const file of files) {
-        const bytes = await liveFile(game, file.path);
+        const bytes = await liveFile(game, file.path, file.bytes.length);
         if (bytes === null || sha256(bytes) !== sha256(file.bytes)) { unchanged = false; break; }
       }
     }
