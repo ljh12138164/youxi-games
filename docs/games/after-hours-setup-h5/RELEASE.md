@@ -21,7 +21,7 @@
 ## 音频与第三方许可
 
 - `driver.js`（MIT）用于 7 步互动新手指引，构建期由仓库插件内联许可声明。
-- 4 首真钢琴背景音乐 MP3 及其完整授权详情记录在 [SOURCES.md](../../../games/after-hours-setup-h5/src/assets/music/SOURCES.md)（包含 CC0 1.0 与 CC BY 3.0 署名），并在「系统设置」内展示演奏者与授权信息。
+- 3 首压缩循环钢琴 MP3 背景音乐（总计约 1.03 MB，外置独立资源按需加载以防 `index.html` 超时）及其完整授权详情记录在 [SOURCES.md](../../../games/after-hours-setup-h5/src/assets/music/SOURCES.md)（包含 CC0 1.0 与 CC BY 3.0 署名），并在「系统设置」内展示演奏者与授权信息。
 
 ## 验收与构建记录
 

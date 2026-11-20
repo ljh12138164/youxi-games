@@ -38,6 +38,7 @@ type AppModal = 'settings' | 'help' | 'resetConfirm' | null;
 const BGM_FILES = import.meta.glob<string>('./assets/music/*.mp3', {
   eager: true,
   import: 'default',
+  query: '?url&no-inline',
 });
 
 const BGM_SOURCES: Record<string, string> = Object.fromEntries(

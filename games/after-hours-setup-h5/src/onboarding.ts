@@ -191,7 +191,7 @@ export function createOnboardingTour(hooks: OnboardingHooks): Driver {
         popover: {
           title: '7. 音乐切换、加速与随时重看指引',
           description:
-            '点右侧「音乐」可随时静音或恢复播放，「设置」能切换 4 首钢琴曲或加速安装动画；点这里的「指南」或顶部「帮助」菜单，随时可以重播这套新手指引。',
+            '点右侧「音乐」可随时静音或恢复播放，「设置」能切换 3 首钢琴曲或加速安装动画；点这里的「指南」或顶部「帮助」菜单，随时可以重播这套新手指引。',
           side: 'bottom',
           align: 'start',
           onPrevClick: () => {

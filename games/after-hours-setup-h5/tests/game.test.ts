@@ -157,7 +157,7 @@ test('full 16-order campaign yields enough funds to pay the $7,000 settlement an
 });
 
 test('piano BGM assets exist on disk and RetroAudio handles play, pause, mute, and track switching', () => {
-  assert.equal(NIGHT_TRACKS.length, 4);
+  assert.equal(NIGHT_TRACKS.length, 3);
   const sources: Record<string, string> = {};
   const assetDir = new URL('../src/assets/music/', import.meta.url);
   for (const track of NIGHT_TRACKS) {

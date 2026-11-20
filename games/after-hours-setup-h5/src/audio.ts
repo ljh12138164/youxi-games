@@ -6,7 +6,7 @@ export type NightTrackMeta = {
   attribution: string;
 };
 
-/** 深夜维修台背景音乐曲目列表（真实钢琴录音 MP3） */
+/** 深夜维修台背景音乐曲目列表（轻量外置钢琴录音 MP3） */
 export const NIGHT_TRACKS: NightTrackMeta[] = [
   {
     id: 0,
@@ -24,14 +24,7 @@ export const NIGHT_TRACKS: NightTrackMeta[] = [
   },
   {
     id: 2,
-    file: '03-raindrop.mp3',
-    title: '窗外细雨与进度条',
-    subtitle: 'Chopin · Op. 28 No. 15',
-    attribution: 'Musopen (CC0 1.0)',
-  },
-  {
-    id: 3,
-    file: '04-goldberg-aria.mp3',
+    file: '03-goldberg-aria.mp3',
     title: '许可协议慢板',
     subtitle: 'Bach · Goldberg Aria',
     attribution: 'Kimiko Ishizaka (CC0 1.0)',
@@ -125,7 +118,7 @@ export class RetroAudio {
       this.stopBgmElement();
       const el = new Audio(url);
       el.loop = true;
-      el.preload = 'auto';
+      el.preload = 'none';
       this.bgmEl = el;
       this.bgmFile = track.file;
     }
@@ -135,6 +128,7 @@ export class RetroAudio {
     el.muted = !this.isMusicAudible();
 
     if (this.isMusicAudible() && this.unlocked) {
+      el.preload = 'auto';
       if (el.paused) {
         void el.play().catch(() => {});
       }
